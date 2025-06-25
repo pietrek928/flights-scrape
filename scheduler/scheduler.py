@@ -180,12 +180,13 @@ def load_jobs(airports):
         for a1 in airports:
             for a2 in airports:
                 if a1 != a2:
-                    JOBS[new_id()] = QueryDatesJob(
+                    job = QueryDatesJob(
                         id=new_id(),
                         type_='QueryDatesJob',
                         src_code=a1,
                         dst_code=a2,
                     )
+                    JOBS[job.id] = job
         print(f'Initialized {len(JOBS)} jobs')
 
 
@@ -240,6 +241,8 @@ async def save_flight_dates(src_code: str, dst_code: str, dates: Tuple[str, ...]
 
 
 def make_app():
+    global END_DATE
+
     # We always need cors here
     CORS(app, origins='*', supports_credentials=True)
     load_jobs(environ['AIRPORTS'].split(','))
