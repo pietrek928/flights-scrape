@@ -1,0 +1,14 @@
+# data files
+**/*.log
+**/*.db
+**/*.sqlite3
+*.json
+
+# Python
+**/__pycache__
+**/*.egg-info
+**/build
+
+# Cython
+**/*.c
+**/*.cpp

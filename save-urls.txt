@@ -1,0 +1,7 @@
+flights availability https://www.ryanair.com/api/farfnd/3/oneWayFares/WAW/ALC/availabilities
+flights details https://www.ryanair.com/api/farfnd/v4/oneWayFares?departureAirportIataCode=WAW&outboundDepartureDateFrom=2025-07-01&market=en-gb&adultPaxCount=1&arrivalAirportIataCode=ALC&searchMode=ALL&outboundDepartureDateTo=2025-07-31&outboundDepartureDaysOfWeek=MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY&outboundDepartureTimeFrom=00:00&outboundDepartureTimeTo=23:59
+flight booking info https://www.ryanair.com/api/booking/v4/en-gb/availability?ADT=1&TEEN=0&CHD=0&INF=0&Origin=WAW&Destination=ALC&promoCode=&IncludeConnectingFlights=false&DateOut=2025-07-23&DateIn=&FlexDaysBeforeOut=2&FlexDaysOut=2&FlexDaysBeforeIn=2&FlexDaysIn=2&RoundTrip=false&IncludePrimeFares=false&ToUs=AGREED
+https://www.ryanair.com/api/booking/v4/en-gb/availability?ADT=1&TEEN=0&CHD=0&INF=0&Origin=WAW&Destination=ALC&promoCode=&IncludeConnectingFlights=false&DateOut=2025-07-23&DateIn=&FlexDaysBeforeOut=2&FlexDaysOut=2&FlexDaysBeforeIn=2&FlexDaysIn=2&RoundTrip=false&IncludePrimeFares=false&ToUs=AGREED
+
+all airports https://www.ryanair.com/api/views/locate/5/airports/en/active
+available destinations https://www.ryanair.com/api/views/locate/searchWidget/routes/en/airport/MST
