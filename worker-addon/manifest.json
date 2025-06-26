@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "Flights scraping worker",
+    "version": "1.0",
+    "description": "Fetch flights data",
+    "permissions": [
+        "webRequest",
+        "scripting"
+    ],
+    "host_permissions": [
+        "http://localhost:8090/*",
+        "https://www.ryanair.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.ryanair.com/*"
+            ],
+            "js": [
+                "ryanair.js"
+            ]
+        }
+    ]
+}
