@@ -16,4 +16,4 @@
 # JS files
 **/addon/*.js
 node_modules
-package-lock.json
+**/package-lock.json
