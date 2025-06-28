@@ -2,7 +2,7 @@
 **/*.log
 **/*.db
 **/*.sqlite3
-*.json
+/*.json
 
 # Python
 **/__pycache__
@@ -12,3 +12,8 @@
 # Cython
 **/*.c
 **/*.cpp
+
+# JS files
+**/addon/*.js
+node_modules
+package-lock.json

@@ -1,17 +1,6 @@
-const init_iframe = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    return iframe;
-}
+import { sleep } from './utils.js';
+import { fetch_job, save_flight_dates, save_data, complete_job } from './scheduler.js'
 
-const execute_in_iframe = (iframe, func) => {
-    const iframe_window = iframe.contentWindow;
-    const iframe_document = iframe_window.document;
-    const iframe_div = iframe_document.createElement('div');
-    iframe_div.addEventListener('click', func);
-    iframe_div.click();
-};
 
 const common_headers = {
     'Client': 'desktop',
@@ -95,70 +84,6 @@ const query_flights_details = async (
         fetch_date: new Date().toISOString(),
     };
 };
-
-const manager_url = 'http://localhost:8090'
-const storage_url = `${manager_url}/storage`
-const scheduler_url = `${manager_url}/scheduler`
-
-const save_data = async (data) => {
-    const url = `${storage_url}/save_result`;
-    const response = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify({
-            dataset_name: 'ryanair',
-            result: data,
-        }),
-        mode: "cors",
-    });
-    if (response.status !== 200) {
-        throw new Error(`Server responded with status ${response.status} ${response.statusText} for ${url}`);
-    }
-};
-
-const fetch_job = async () => {
-    const url = `${scheduler_url}/fetch_job`;
-    const response = await fetch(url, {
-        method: 'POST',
-        body: '',
-        mode: "cors",
-    });
-    if (response.status !== 200) {
-        throw new Error(`Server responded with status ${response.status} ${response.statusText} for ${url}`);
-    }
-    return await response.json();
-};
-
-const complete_job = async (job_id) => {
-    const url = `${scheduler_url}/complete_job`;
-    const response = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify({
-            job_id: job_id,
-        }),
-        mode: "cors",
-    });
-    if (response.status !== 200) {
-        throw new Error(`Server responded with status ${response.status} ${response.statusText} for ${url}`);
-    }
-};
-
-const save_flight_dates = async (src_code, dst_code, dates) => {
-    const url = `${scheduler_url}/save_flight_dates`;
-    const response = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify({
-            src_code: src_code,
-            dst_code: dst_code,
-            dates: dates,
-        }),
-        mode: "cors",
-    });
-    if (response.status !== 200) {
-        throw new Error(`Server responded with status ${response.status} ${response.statusText} for ${url}`);
-    }
-};
-
-const sleep = (base_s=2000, rand_s=5000) => new Promise((resolve) => setTimeout(resolve, base_s + Math.random() * rand_s))
 
 const process_fetch_dates = async (src_code, dst_code) => {
     const dates = await query_available_dates(src_code, dst_code);
