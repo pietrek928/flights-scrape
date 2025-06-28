@@ -1,0 +1,8 @@
+List dates https://be.wizzair.com/27.16.0/Api/search/flightDates?departureStation=DBV&arrivalStation=WAW&from=2025-06-28&to=2025-08-01
+Airports https://be.wizzair.com/27.16.0/Api/asset/map?languageCode=en-gb
+
+Flights POST https://be.wizzair.com/27.16.0/Api/asset/farechart
+{"isRescueFare":false,"adultCount":1,"childCount":0,"dayInterval":7,"wdc":false,"isFlightChange":false,"flightList":[{"departureStation":"WAW","arrivalStation":"DBV","date":"2025-07-08T00:00:00"},{"departureStation":"DBV","arrivalStation":"WAW","date":"2025-07-26T00:00:00"}]}
+
+Prices POST https://be.wizzair.com/27.16.0/Api/search/search
+{"isFlightChange":false,"flightList":[{"departureStation":"WAW","arrivalStation":"DBV","departureDate":"2025-07-08T00:00:00"},{"departureStation":"DBV","arrivalStation":"WAW","departureDate":"2025-07-26T00:00:00"}],"adultCount":1,"childCount":0,"infantCount":0,"wdc":true}
