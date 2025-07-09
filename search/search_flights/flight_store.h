@@ -20,7 +20,8 @@ class FlightIndex {
 
     public:
 
-    FlightIndex(const std::vector<Flight> init_flights)
+    FlightIndex() {}
+    FlightIndex(const std::vector<Flight> &init_flights)
         : flights(init_flights.begin(), init_flights.end()) {}
     void push_flight(
         flight_t id, vertex_t src, vertex_t dst,

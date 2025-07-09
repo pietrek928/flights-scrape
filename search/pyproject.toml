@@ -14,8 +14,8 @@ language_level = "3"
 packages = ["search_flights"]
 
 [[tool.setuptools.ext-modules]]
-name = "search_flights.flight_graph"
-sources = ["search_flights/flight_graph.pyx"]
+name = "search_flights.flight_optim"
+sources = ["search_flights/flight_optim.pyx"]
 language = "c++"
 extra-compile-args = ["-std=c++17", "-march=native", "-Ofast"]
 

@@ -13,16 +13,68 @@ cost_t score_diff(const DiffCostSettings &settings, cost_t val) {
     }
 }
 
+DayScorer compute_day_scores(
+    const cost_t *day_costs, int ndays,
+    flight_time_t start_time, flight_duration_t day_factor
+) {
+    DayScorer r = {
+        .start_time = start_time,
+        .day_factor = day_factor,
+    };
+    r.day_costs_agg.resize(ndays);
+    cost_t score_sum = 0;
+    for (int i=0; i<ndays; i++) {
+        score_sum += day_costs[i];
+        r.day_costs_agg[i] = score_sum;
+    }
+    return r;
+}
+
+cost_t score_day_range(
+    const DayScorer &settings,
+    flight_time_t start_time, flight_time_t end_time, bool continous = false
+) {
+    int nscores = settings.day_costs_agg.size();
+    flight_time_t start_score, end_score;
+
+    int start_pos = (start_time - settings.start_time) * settings.day_factor;
+    if (!continous) {
+        start_pos -= 1;
+    }
+    if (start_pos < 0) {
+        start_score = 0;
+    } else if (start_pos >= nscores) {
+        start_score = settings.day_costs_agg[nscores-1];
+    } else {
+        start_score = settings.day_costs_agg[start_pos];
+    }
+    int end_pos = (end_time - settings.start_time) * settings.day_factor;
+    if (end_pos < 0) {
+        end_score = 0;
+    } else if (end_pos >= nscores) {
+        end_score = settings.day_costs_agg[nscores-1];
+    } else {
+        end_score = settings.day_costs_agg[end_pos];
+    }
+
+    return end_score - start_score;
+}
+
 FlightTravel extend_travel(
     const FlightTravel &travel, const Flight &flight,
+    const DayScorer &day_settings,
     const DiffCostSettings &wait_time_scoring,
     const DiffCostSettings &flight_start_scoring,
     const DiffCostSettings &flight_end_scoring,
     const DiffCostSettings &flight_duration_scoring
 ) {
     auto cost = travel.cost;
+    cost += score_day_range(
+        day_settings, travel.end_time,
+        flight.start_time + flight.duration, travel.flights_count
+    );
     if (travel.flights_count) {
-        cost += score_diff(wait_time_scoring, travel.end_time);
+        cost += score_diff(wait_time_scoring, flight.start_time - travel.end_time);
     }
     cost += score_diff(flight_start_scoring, flight.day_start_time);
     cost += score_diff(flight_duration_scoring, flight.duration);
