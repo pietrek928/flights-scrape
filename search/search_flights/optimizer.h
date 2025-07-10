@@ -6,7 +6,13 @@
 
 struct FlightCompareTime {
     inline bool operator()(const Flight& a, const Flight& b) const {
-        return a.start_time < b.start_time;
+        return a.start_time + a.duration < b.start_time + b.duration;
+    }
+};
+
+struct TravelCompareTime {
+    inline bool operator()(const FlightTravel& a, const FlightTravel& b) const {
+        return a.end_time < b.end_time;
     }
 };
 

@@ -12,6 +12,7 @@
 # Cython
 **/*.c
 **/*.cpp
+**/*.so
 
 # JS files
 **/addon/*.js

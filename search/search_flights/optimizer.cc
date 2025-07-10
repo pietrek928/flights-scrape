@@ -1,8 +1,10 @@
 #include "optimizer.h"
 #include "flight_structure.h"
 
+#include <set>
 #include <map>
 #include <algorithm>
+#include <vector>
 
 cost_t score_diff(const DiffCostSettings &settings, cost_t val) {
     cost_t diff_val = val - settings.desired_value;
@@ -88,9 +90,8 @@ FlightTravel extend_travel(
     };
 }
 
-template<class Ts>
 FlightTravel extend_best_travel(
-    const Ts &travel_set, const Flight &flight, flight_duration_t search_intervel,
+    const std::vector<FlightTravel> &travel_vec, const Flight &flight, flight_duration_t search_intervel,
     const DiffCostSettings &wait_time_scoring,
     const DiffCostSettings &flight_start_scoring,
     const DiffCostSettings &flight_end_scoring,
@@ -98,16 +99,20 @@ FlightTravel extend_best_travel(
 ) {
     FlightTravel search_start_travel, search_end_travel;
     search_start_travel.end_time = flight.start_time - wait_time_scoring.desired_value - search_intervel;
-    auto it = travel_set.lower_bound(search_start_travel);
+    auto it = std::lower_bound(travel_vec.begin(), travel_vec.end(), search_start_travel, TravelCompareTime());
     search_end_travel.end_time = std::min(
         flight.start_time - wait_time_scoring.desired_value + search_intervel, flight.start_time
     );
-    auto it_end = travel_set.upper_bound(search_end_travel);
+    auto it_end = std::upper_bound(travel_vec.begin(), travel_vec.end(), search_end_travel, TravelCompareTime());
 
     FlightTravel best_travel;
     best_travel.cost = 1e9;
     for (; it != it_end; ++it) {
         const auto &travel = *it;
+        if (travel.end_vertex != flight.src || travel.end_time > flight.start_time) {
+            continue;
+        }
+
         auto cost = travel.cost;
         if (travel.flights_count) {
             cost += score_diff(wait_time_scoring, travel.end_time);
@@ -181,4 +186,22 @@ void push_travel(
 
     // Insert travel
     travel_set.insert(new_travel);
+}
+
+void extend_travels(
+    std::map<vertex_t, std::set<FlightTravel, TravelCompareTime>> &travels_mapping,
+    const std::vector<Flight> &flights_, const TravelSearchSettings &settings
+) {
+    std::vector<Flight> flights_by_time = flights_;
+    std::sort(flights_by_time.begin(), flights_by_time.end(), FlightCompareTime());
+    for (const auto &flight : flights_by_time) {
+        auto new_travel = extend_best_travel(
+            travels_mapping[flight.src], const Flight &flight, flight_duration_t search_intervel, const DiffCostSettings &wait_time_scoring, const DiffCostSettings &flight_start_scoring, const DiffCostSettings &flight_end_scoring, const DiffCostSettings &flight_duration_scoring
+        )
+    }
+}
+
+std::vector<FlightTravel> find_best_travels(
+    const std::vector<Flight> &flights_, const TravelSearchSettings &settings
+) {
 }

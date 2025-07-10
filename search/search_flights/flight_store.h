@@ -10,7 +10,7 @@ struct FlightCompareVertex {
         if (a.dst != b.dst) {
             return a.dst < b.dst;
         }
-        return a.start_time < b.start_time;
+        return a.start_time + a.duration < b.start_time + b.duration;
     }
 };
 
