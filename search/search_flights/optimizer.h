@@ -22,6 +22,12 @@ typedef struct {
     cost_t up_factor;
 } DiffCostSettings;
 
+constexpr static DiffCostSettings zero_cost = {
+    .desired_value = 0,
+    .down_factor = 0,
+    .up_factor = 0,
+};
+
 typedef struct {
     flight_time_t start_time;
     flight_duration_t day_factor;
@@ -29,8 +35,26 @@ typedef struct {
 } DayScorer;
 
 typedef struct {
+    cost_t back_cost_factor;
+    cost_t forward_cost_factor;
+    flight_duration_t time_back;
+} TravelCoverSettings;
+
+typedef struct {
     DayScorer day_scorer;
+    flight_duration_t search_interval;
+    DiffCostSettings flight_start_day_time;
+    DiffCostSettings first_flight_wait_time, flight_wait_time, flight_duration;
+    TravelCoverSettings cover_settings;
+    cost_t move_cost;
+} TravelExtendSettings;
+
+typedef struct {
+    DayScorer day_scorer;
+    flight_duration_t search_interval;
     DiffCostSettings start_in_day_time, start_out_day_time;
-    DiffCostSettings trip_duration;
+    DiffCostSettings wait_time, trip_duration, flight_duration;
     DiffCostSettings end_in_day_time, end_out_day_time;
+    TravelCoverSettings cover_settings;
+    cost_t move_cost;
 } TravelSearchSettings;

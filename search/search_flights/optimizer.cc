@@ -32,7 +32,7 @@ DayScorer compute_day_scores(
     return r;
 }
 
-cost_t score_day_range(
+cost_t compute_days_cost(
     const DayScorer &settings,
     flight_time_t start_time, flight_time_t end_time, bool continous = false
 ) {
@@ -65,18 +65,18 @@ cost_t score_day_range(
 FlightTravel extend_travel(
     const FlightTravel &travel, const Flight &flight,
     const DayScorer &day_settings,
+    cost_t move_cost,
     const DiffCostSettings &wait_time_scoring,
     const DiffCostSettings &flight_start_scoring,
-    const DiffCostSettings &flight_end_scoring,
     const DiffCostSettings &flight_duration_scoring
 ) {
     auto cost = travel.cost;
-    cost += score_day_range(
+    cost += compute_days_cost(
         day_settings, travel.end_time,
         flight.start_time + flight.duration, travel.flights_count
     );
     if (travel.flights_count) {
-        cost += score_diff(wait_time_scoring, flight.start_time - travel.end_time);
+        cost += move_cost + score_diff(wait_time_scoring, flight.start_time - travel.end_time);
     }
     cost += score_diff(flight_start_scoring, flight.day_start_time);
     cost += score_diff(flight_duration_scoring, flight.duration);
@@ -85,6 +85,7 @@ FlightTravel extend_travel(
         .last_travel = travel.id,
         .flights_count = travel.flights_count+1,
         .end_time = flight.start_time + flight.duration,
+        .day_end_time = flight.day_start_time + flight.duration,  // TODO: day skip
         .cost = cost,
         .end_vertex = flight.dst,
     };
@@ -92,9 +93,10 @@ FlightTravel extend_travel(
 
 FlightTravel extend_best_travel(
     const std::vector<FlightTravel> &travel_vec, const Flight &flight, flight_duration_t search_intervel,
+    const DayScorer &day_settings,
+    cost_t move_cost,
     const DiffCostSettings &wait_time_scoring,
     const DiffCostSettings &flight_start_scoring,
-    const DiffCostSettings &flight_end_scoring,
     const DiffCostSettings &flight_duration_scoring
 ) {
     FlightTravel search_start_travel, search_end_travel;
@@ -114,8 +116,12 @@ FlightTravel extend_best_travel(
         }
 
         auto cost = travel.cost;
+        cost += compute_days_cost(
+            day_settings, travel.end_time,
+            flight.start_time + flight.duration, travel.flights_count
+        );
         if (travel.flights_count) {
-            cost += score_diff(wait_time_scoring, travel.end_time);
+            cost += move_cost + score_diff(wait_time_scoring, travel.end_time);
         }
         cost += score_diff(flight_start_scoring, flight.day_start_time);
         cost += score_diff(flight_duration_scoring, flight.duration);
@@ -126,6 +132,7 @@ FlightTravel extend_best_travel(
                 .last_travel = travel.id,
                 .flights_count = travel.flights_count+1,
                 .end_time = flight.start_time + flight.duration,
+                .day_end_time = flight.day_start_time + flight.duration,  // TODO: day skip
                 .cost = cost,
                 .end_vertex = flight.dst,
             };
@@ -135,73 +142,161 @@ FlightTravel extend_best_travel(
     return best_travel;
 }
 
-template<class Ts>
-void push_travel(
-    Ts &travel_set, const FlightTravel &new_travel,
-    cost_t back_cost_factor, cost_t forward_cost_factor,
-    flight_duration_t time_back
+bool push_travel(
+    std::vector<FlightTravel> &travel_vec, const FlightTravel &new_travel,
+    const TravelCoverSettings &settings
 ) {
-    FlightTravel search_travel = new_travel;
-    search_travel.end_time -= time_back;
+    auto search_end_time = new_travel.end_time - settings.time_back;
 
     // Check if travel is covered by another
-    auto it = travel_set.lower_bound(search_travel);
-    while (it != travel_set.end()) {
+    for (auto it = travel_vec.rbegin(); it != travel_vec.rend(); ++it) {
         auto travel = *it;
+        if (travel.end_time < search_end_time) {
+            break;
+        }
+
         auto time_diff = new_travel.end_time - travel.end_time;
         auto cost_diff = new_travel.cost - travel.cost;
 
         if (time_diff > 0) {
-            if (cost_diff < -time_diff * back_cost_factor) {
-                return;
+            if (cost_diff < -time_diff * settings.back_cost_factor) {
+                return false;
             }
         } else {
-            if (cost_diff < time_diff * forward_cost_factor) {
-                return;
+            if (cost_diff < time_diff * settings.forward_cost_factor) {
+                return false;
             }
         }
         ++it;
     }
 
     // Remove travels this one convers
-    it = travel_set.lower_bound(search_travel);
-    while (it != travel_set.end()) {
-        auto travel = *it;
+    while (!travel_vec.empty()) {
+        auto travel = travel_vec.back();
         auto time_diff = new_travel.end_time - travel.end_time;
         auto cost_diff = new_travel.cost - travel.cost;
 
         if (time_diff > 0) {
-            if (cost_diff > time_diff * back_cost_factor) {
-                it = travel_set.erase(it);
+            if (cost_diff > time_diff * settings.back_cost_factor) {
+                travel_vec.pop_back();
                 continue;
             }
         } else {
-            if (cost_diff > -time_diff * forward_cost_factor) {
-                it = travel_set.erase(it);
+            if (cost_diff > -time_diff * settings.forward_cost_factor) {
+                travel_vec.pop_back();
                 continue;
             }
         }
-        ++it;
+        break;
     }
 
     // Insert travel
-    travel_set.insert(new_travel);
+    travel_vec.push_back(new_travel);
+    return true;
 }
 
-void extend_travels(
-    std::map<vertex_t, std::set<FlightTravel, TravelCompareTime>> &travels_mapping,
-    const std::vector<Flight> &flights_, const TravelSearchSettings &settings
+auto extend_travels(
+    const std::map<vertex_t, std::vector<FlightTravel>> &travels_mapping,
+    const std::vector<Flight> &flights, const TravelExtendSettings &settings,
+    travel_t &travel_id_inc
 ) {
-    std::vector<Flight> flights_by_time = flights_;
+    std::vector<Flight> flights_by_time = flights;
     std::sort(flights_by_time.begin(), flights_by_time.end(), FlightCompareTime());
+
+    std::map<vertex_t, std::vector<FlightTravel>> new_travels;
     for (const auto &flight : flights_by_time) {
-        auto new_travel = extend_best_travel(
-            travels_mapping[flight.src], const Flight &flight, flight_duration_t search_intervel, const DiffCostSettings &wait_time_scoring, const DiffCostSettings &flight_start_scoring, const DiffCostSettings &flight_end_scoring, const DiffCostSettings &flight_duration_scoring
-        )
+        const auto travels_it_in = travels_mapping.find(flight.src);
+        if (travels_it_in != travels_mapping.end()) {
+            const auto &travels = travels_it_in->second;
+            auto new_travel_in = extend_best_travel(
+                travels, flight, settings.search_interval,
+                settings.day_scorer, settings.move_cost, settings.first_flight_wait_time,
+                settings.flight_start_day_time,
+                settings.flight_duration
+            );
+            new_travel_in.id = travel_id_inc;
+            if (push_travel(
+                new_travels[flight.dst], new_travel_in, settings.cover_settings
+            )) {
+                ++travel_id_inc;
+            }
+        }
+
+        const auto travels_it_comp = new_travels.find(flight.src);
+        if (travels_it_comp != new_travels.end()) {
+            const auto &travels = travels_it_comp->second;
+            auto new_travel_comp = extend_best_travel(
+                travels, flight, settings.search_interval,
+                settings.day_scorer, settings.move_cost, settings.flight_wait_time,
+                zero_cost,
+                settings.flight_duration
+            );
+            new_travel_comp.id = travel_id_inc;
+            if (push_travel(
+                new_travels[flight.dst], new_travel_comp, settings.cover_settings
+            )) {
+                ++travel_id_inc;
+            }
+        }
     }
+
+    return new_travels;
 }
 
-std::vector<FlightTravel> find_best_travels(
-    const std::vector<Flight> &flights_, const TravelSearchSettings &settings
+std::vector<FlightTravel> find_best_single_trip(
+    vertex_t start_city, flight_time_t start_time,
+    const std::vector<Flight> &flights,
+    const TravelSearchSettings &settings,
+    const std::map<vertex_t, cost_t> &city_costs
 ) {
+    travel_t travel_id_inc = 0;
+    std::map<vertex_t, std::vector<FlightTravel>> start_trip;
+    start_trip[start_city].push_back({
+        .id = travel_id_inc++,
+        .last_flight = 0,
+        .last_travel = 0,
+        .flights_count = 0,
+        .end_time = start_time,
+        .cost = 0,
+        .end_vertex = start_city,
+    });
+    TravelExtendSettings start_extend_settings = {
+        .day_scorer = settings.day_scorer,
+        .search_interval = settings.search_interval,
+        .flight_start_day_time = settings.start_in_day_time,
+        .first_flight_wait_time = zero_cost,
+        .flight_wait_time = settings.wait_time,
+        .flight_duration = settings.flight_duration,
+        .cover_settings = settings.cover_settings,
+        .move_cost = settings.move_cost,
+    };
+    auto to_city_travels = extend_travels(start_trip, flights, start_extend_settings, travel_id_inc);
+    for (auto &city_travels : to_city_travels) {
+        for (auto &travel : city_travels.second) {
+            auto cost_it = city_costs.find(travel.end_vertex);
+            if (cost_it != city_costs.end()) {
+                travel.cost += cost_it->second;
+            }
+            travel.cost += score_diff(settings.start_out_day_time, travel.day_end_time);
+        }
+    }
+
+    TravelExtendSettings end_extend_settings = {
+        .day_scorer = settings.day_scorer,
+        .search_interval = settings.search_interval,
+        .flight_start_day_time = settings.end_in_day_time,
+        .first_flight_wait_time = settings.trip_duration,
+        .flight_wait_time = settings.wait_time,
+        .flight_duration = settings.flight_duration,
+        .cover_settings = settings.cover_settings,
+        .move_cost = settings.move_cost,
+    };
+    auto from_city_travels = extend_travels(to_city_travels, flights, end_extend_settings, travel_id_inc);
+    for (auto &city_travels : from_city_travels) {
+        for (auto &travel : city_travels.second) {
+            travel.cost += score_diff(settings.end_out_day_time, travel.day_end_time);
+        }
+    }
+
+    // TODO: assemble travels
 }

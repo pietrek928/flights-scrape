@@ -26,6 +26,7 @@ typedef struct {
     int flights_count;
 
     flight_time_t end_time;
+    flight_time_t day_end_time;
     cost_t cost;
     vertex_t end_vertex;
 } FlightTravel;
