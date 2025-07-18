@@ -58,3 +58,9 @@ typedef struct {
     TravelCoverSettings cover_settings;
     cost_t move_cost;
 } TravelSearchSettings;
+
+
+DayScorer compute_day_scores(
+    const cost_t *day_costs, int ndays,
+    flight_time_t start_time, flight_duration_t day_factor
+);

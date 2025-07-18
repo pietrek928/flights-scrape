@@ -1,0 +1,1 @@
+from search_flights.flight_optim import FlighIndex
