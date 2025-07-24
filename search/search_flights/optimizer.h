@@ -2,6 +2,7 @@
 #include "flight_structure.h"
 
 #include <vector>
+#include <map>
 
 
 struct FlightCompareTime {
@@ -53,8 +54,8 @@ typedef struct {
     DayScorer day_scorer;
     flight_duration_t search_interval;
     DiffCostSettings start_in_day_time, start_out_day_time;
-    DiffCostSettings wait_time, trip_duration, flight_duration;
     DiffCostSettings end_in_day_time, end_out_day_time;
+    DiffCostSettings wait_time, trip_duration, flight_duration;
     TravelCoverSettings cover_settings;
     cost_t move_cost;
 } TravelSearchSettings;
@@ -63,4 +64,11 @@ typedef struct {
 DayScorer compute_day_scores(
     const cost_t *day_costs, int ndays,
     flight_time_t start_time, flight_duration_t day_factor
+);
+
+std::vector<FlightTravel> find_best_single_trip(
+    vertex_t start_city, flight_time_t start_time,
+    const std::vector<Flight> &flights,
+    const TravelSearchSettings &settings,
+    const std::map<vertex_t, cost_t> &city_costs
 );

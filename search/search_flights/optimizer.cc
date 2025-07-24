@@ -3,9 +3,9 @@
 
 #include <utility>
 #include <set>
-#include <map>
 #include <algorithm>
 #include <vector>
+
 
 cost_t score_diff(const DiffCostSettings &settings, cost_t val) {
     cost_t diff_val = val - settings.desired_value;
@@ -71,7 +71,7 @@ FlightTravel extend_travel(
     const DiffCostSettings &flight_start_scoring,
     const DiffCostSettings &flight_duration_scoring
 ) {
-    auto cost = travel.cost;
+    auto cost = travel.cost + flight.cost;
     cost += compute_days_cost(
         day_settings, travel.end_time,
         flight.start_time + flight.duration, travel.flights_count
@@ -116,7 +116,7 @@ FlightTravel extend_best_travel(
             continue;
         }
 
-        auto cost = travel.cost;
+        auto cost = travel.cost + flight.cost;
         cost += compute_days_cost(
             day_settings, travel.end_time,
             flight.start_time + flight.duration, travel.flights_count
@@ -274,8 +274,8 @@ std::vector<FlightTravel> find_best_single_trip(
     travel_t travel_id_inc = 0;
     FlightTravel start_travel = {
         .id = travel_id_inc++,
-        .last_flight = 0,
-        .last_travel = 0,
+        .last_flight = -1,
+        .last_travel = -1,
         .flights_count = 0,
         .end_time = start_time,
         .cost = 0,

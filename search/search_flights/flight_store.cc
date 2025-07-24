@@ -7,13 +7,13 @@
 void FlightIndex::push_flight(
     flight_t id, vertex_t src, vertex_t dst,
     flight_time_t start_time, flight_time_t day_start_time,
-    flight_duration_t duration
+    flight_duration_t duration, cost_t cost
 ) {
     sorted = false;
     flights.push_back({
         .id = id, .src = src, .dst = dst,
         .start_time = start_time, .day_start_time = day_start_time,
-        .duration = duration
+        .duration = duration, .cost = cost,
     });
 }
 

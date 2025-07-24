@@ -17,6 +17,7 @@ typedef struct {
     flight_time_t start_time;
     flight_time_t day_start_time;
     flight_duration_t duration;
+    cost_t cost;
 } Flight;
 
 typedef struct {

@@ -26,7 +26,7 @@ class FlightIndex {
     void push_flight(
         flight_t id, vertex_t src, vertex_t dst,
         flight_time_t start_time, flight_time_t day_start_time,
-        flight_duration_t duration
+        flight_duration_t duration, cost_t cost
     );
     void sort_flights();
     std::vector<Flight> select_flights(
@@ -34,4 +34,7 @@ class FlightIndex {
         const vertex_t *dst_vs, int ndst_v,
         flight_time_t start_time, flight_time_t end_time
     ) const;
+    inline auto size() {
+        return flights.size();
+    }
 };

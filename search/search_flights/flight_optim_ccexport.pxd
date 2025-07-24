@@ -1,4 +1,5 @@
 from libcpp.vector cimport vector
+from libcpp.map cimport map as map_cc
 
 
 cdef extern from "flight_structure.h":
@@ -12,6 +13,9 @@ cdef extern from "flight_structure.h":
     cdef cppclass Flight:
         pass
 
+    cdef cppclass FlightTravel:
+        pass
+
 
 cdef extern from "flight_store.cc":
     cdef cppclass FlightIndex:
@@ -20,7 +24,7 @@ cdef extern from "flight_store.cc":
         void push_flight(
             flight_t id, vertex_t src, vertex_t dst,
             flight_time_t start_time, flight_time_t day_start_time,
-            flight_duration_t duration
+            flight_duration_t duration, cost_t cost
         )
         void sort_flights()
         vector[Flight] select_flights(
@@ -28,6 +32,7 @@ cdef extern from "flight_store.cc":
             const vertex_t *dst_vs, int ndst_v,
             flight_time_t start_time, flight_time_t end_time
         ) const
+        int size()
 
 
 cdef extern from "optimizer.cc":
@@ -37,7 +42,9 @@ cdef extern from "optimizer.cc":
         cost_t up_factor
 
     ctypedef struct DayScorer:
-        pass
+        flight_time_t start_time
+        flight_duration_t day_factor
+        vector[cost_t] day_costs_agg
 
     ctypedef struct TravelCoverSettings:
         cost_t back_cost_factor
@@ -59,15 +66,22 @@ cdef extern from "optimizer.cc":
         flight_duration_t search_interval
         DiffCostSettings start_in_day_time
         DiffCostSettings start_out_day_time
+        DiffCostSettings end_in_day_time
+        DiffCostSettings end_out_day_time
         DiffCostSettings wait_time
         DiffCostSettings trip_duration
         DiffCostSettings flight_duration
-        DiffCostSettings end_in_day_time
-        DiffCostSettings end_out_day_time
         TravelCoverSettings cover_settings
         cost_t move_cost
 
     cdef DayScorer compute_day_scores(
         const cost_t *day_costs, int ndays,
         flight_time_t start_time, flight_duration_t day_factor
+    )
+
+    cdef vector[FlightTravel] find_best_single_trip(
+        vertex_t start_city, flight_time_t start_time,
+        const vector[Flight] &flights,
+        const TravelSearchSettings &settings,
+        const map_cc[vertex_t, cost_t] &city_costs
     )
