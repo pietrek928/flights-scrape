@@ -5,6 +5,7 @@
 #include <set>
 #include <algorithm>
 #include <vector>
+#include <iostream>
 
 
 cost_t score_diff(const DiffCostSettings &settings, cost_t val) {
@@ -86,7 +87,7 @@ FlightTravel extend_travel(
         .last_travel = travel.id,
         .flights_count = travel.flights_count+1,
         .end_time = flight.start_time + flight.duration,
-        .day_end_time = flight.day_start_time + flight.duration,  // TODO: day skip
+        .day_end_time = flight.day_end_time,
         .cost = cost,
         .end_vertex = flight.dst,
     };
@@ -98,15 +99,19 @@ FlightTravel extend_best_travel(
     cost_t move_cost,
     const DiffCostSettings &wait_time_scoring,
     const DiffCostSettings &flight_start_scoring,
-    const DiffCostSettings &flight_duration_scoring
+    const DiffCostSettings &flight_duration_scoring,
+    int min_check_flights=8
 ) {
-    FlightTravel search_start_travel, search_end_travel;
-    search_start_travel.end_time = flight.start_time - wait_time_scoring.desired_value - search_intervel;
-    auto it = std::lower_bound(travel_vec.begin(), travel_vec.end(), search_start_travel, TravelCompareTime());
-    search_end_travel.end_time = std::min(
+    FlightTravel search_travel;
+    search_travel.end_time = flight.start_time - wait_time_scoring.desired_value - search_intervel;
+    auto it = std::lower_bound(travel_vec.begin(), travel_vec.end(), search_travel, TravelCompareTime());
+    search_travel.end_time = std::min(
         flight.start_time - wait_time_scoring.desired_value + search_intervel, flight.start_time
     );
-    auto it_end = std::upper_bound(travel_vec.begin(), travel_vec.end(), search_end_travel, TravelCompareTime());
+    auto it_end = std::upper_bound(travel_vec.begin(), travel_vec.end(), search_travel, TravelCompareTime());
+    if (it_end - it < min_check_flights) { // select at least min_check_fligths if possible
+        it = std::max(it_end - min_check_flights, travel_vec.begin());
+    }
 
     FlightTravel best_travel;
     best_travel.cost = 1e9;
@@ -133,7 +138,7 @@ FlightTravel extend_best_travel(
                 .last_travel = travel.id,
                 .flights_count = travel.flights_count+1,
                 .end_time = flight.start_time + flight.duration,
-                .day_end_time = flight.day_start_time + flight.duration,  // TODO: day skip
+                .day_end_time = flight.day_end_time,
                 .cost = cost,
                 .end_vertex = flight.dst,
             };
@@ -171,7 +176,7 @@ bool push_travel(
         ++it;
     }
 
-    // Remove travels this one convers
+    // Remove travels this one covers
     while (!travel_vec.empty()) {
         auto travel = travel_vec.back();
         auto time_diff = new_travel.end_time - travel.end_time;
@@ -216,6 +221,9 @@ auto extend_travels(
                 settings.flight_start_day_time,
                 settings.flight_duration
             );
+            if (new_travel_in.cost >= 1e8) {
+                continue;
+            }
             new_travel_in.id = travel_id_inc;
             if (push_travel(
                 new_travels_by_city[flight.dst], new_travel_in, settings.cover_settings
@@ -234,6 +242,9 @@ auto extend_travels(
                 zero_cost,
                 settings.flight_duration
             );
+            if (new_travel_comp.cost >= 1e8) {
+                continue;
+            }
             new_travel_comp.id = travel_id_inc;
             if (push_travel(
                 new_travels_by_city[flight.dst], new_travel_comp, settings.cover_settings
@@ -263,6 +274,18 @@ std::set<travel_t> select_used_travels(
         }
     }
     return used_travels;
+}
+
+void normalize_travel_ids(std::vector<FlightTravel> &travels) {
+    std::map<travel_t, travel_t> travel_map;
+    for (int it=0; it<travels.size(); ++it) {
+        auto &travel = travels[it];
+        travel_map[travel.id] = it;
+        travel.id = it;
+        if (travel.last_travel >= 0) {
+            travel.last_travel = travel_map[travel.last_travel];
+        }
+    }
 }
 
 std::vector<FlightTravel> find_best_single_trip(
@@ -342,5 +365,6 @@ std::vector<FlightTravel> find_best_single_trip(
     for (auto travel_id : select_used_travels(all_travels, new_travels_to)) {
         res_travels.push_back(all_travels[travel_id]);
     }
+    normalize_travel_ids(res_travels);
     return res_travels;
 }

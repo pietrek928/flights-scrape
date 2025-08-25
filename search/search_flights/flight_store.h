@@ -26,7 +26,8 @@ class FlightIndex {
     void push_flight(
         flight_t id, vertex_t src, vertex_t dst,
         flight_time_t start_time, flight_time_t day_start_time,
-        flight_duration_t duration, cost_t cost
+        flight_time_t day_end_time, flight_duration_t duration,
+        cost_t cost
     );
     void sort_flights();
     std::vector<Flight> select_flights(

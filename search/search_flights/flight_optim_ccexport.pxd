@@ -14,7 +14,15 @@ cdef extern from "flight_structure.h":
         pass
 
     cdef cppclass FlightTravel:
-        pass
+        travel_t id
+        flight_t last_flight
+        travel_t last_travel
+        int flights_count
+
+        flight_time_t end_time
+        flight_time_t day_end_time
+        cost_t cost
+        vertex_t end_vertex
 
 
 cdef extern from "flight_store.cc":
@@ -24,7 +32,7 @@ cdef extern from "flight_store.cc":
         void push_flight(
             flight_t id, vertex_t src, vertex_t dst,
             flight_time_t start_time, flight_time_t day_start_time,
-            flight_duration_t duration, cost_t cost
+            flight_time_t day_end_time, flight_duration_t duration, cost_t cost
         )
         void sort_flights()
         vector[Flight] select_flights(

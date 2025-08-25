@@ -2,15 +2,73 @@ from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.map cimport map as map_cc
 from .flight_optim_ccexport cimport (
-    flight_t, vertex_t, flight_time_t, flight_duration_t, cost_t,
+    flight_t, travel_t, vertex_t, flight_time_t, flight_duration_t, cost_t,
     compute_day_scores as compute_day_scores_cc, find_best_single_trip as find_best_single_trip_cc,
-    Flight as FlightCC, FlightTravel as FlightTravelCC, FlightIndex as FlightIndexCC,
+    FlightTravel as FlightTravelCC, FlightIndex as FlightIndexCC,
     DiffCostSettings as DiffCostSettingsCC,
     DayScorer as DayScorerCC,
     TravelCoverSettings as TravelCoverSettingsCC,
     TravelExtendSettings as TravelExtendSettingsCC,
     TravelSearchSettings as TravelSearchSettingsCC
 )
+
+
+cdef class FlightTravel:
+    cdef FlightTravelCC cc_obj
+
+    def __init__(
+        self, id: travel_t = 0, last_flight: flight_t = 0, last_travel: travel_t = 0,
+        flights_count: int = 0, end_time: flight_time_t = 0, day_end_time: flight_time_t = 0,
+        cost: cost_t = 0, end_vertex: vertex_t = 0
+    ):
+        self.cc_obj.id = id
+        self.cc_obj.last_flight = last_flight
+        self.cc_obj.last_travel = last_travel
+        self.cc_obj.flights_count = flights_count
+        self.cc_obj.end_time = end_time
+        self.cc_obj.day_end_time = day_end_time
+        self.cc_obj.cost = cost
+        self.cc_obj.end_vertex = end_vertex
+
+    @property
+    def id(self) -> travel_t:
+        return self.cc_obj.id
+
+    @property
+    def last_flight(self) -> flight_t:
+        return self.cc_obj.last_flight
+
+    @property
+    def last_travel(self) -> travel_t:
+        return self.cc_obj.last_travel
+
+    @property
+    def flights_count(self) -> int:
+        return self.cc_obj.flights_count
+
+    @property
+    def end_time(self) -> flight_time_t:
+        return self.cc_obj.end_time
+
+    @property
+    def day_end_time(self) -> flight_time_t:
+        return self.cc_obj.day_end_time
+
+    @property
+    def cost(self) -> cost_t:
+        return self.cc_obj.cost
+
+    @property
+    def end_vertex(self) -> vertex_t:
+        return self.cc_obj.end_vertex
+
+    def __repr__(self):
+        return (
+            f"FlightTravel(id={self.id}, last_flight={self.last_flight}, "
+            f"last_travel={self.last_travel}, flights_count={self.flights_count}, "
+            f"end_time={self.end_time}, day_end_time={self.day_end_time}, "
+            f"cost={self.cost}, end_vertex={self.end_vertex})"
+        )
 
 
 cdef class FlightsList:
@@ -24,16 +82,18 @@ cdef class FlightsList:
             f"FlightsList(len={self.size()})"
         )
 
+
 cdef class TravelsList:
-    cdef vector[FlightTravelCC] travels
+    cdef vector[FlightTravelCC] _travels
 
     cdef size(self):
-        return self.travels.size()
+        return self._travels.size()
 
     def __repr__(self):
         return (
             f"TravelsList(len={self.size()})"
         )
+
 
 cdef class FlightIndex:
     cdef FlightIndexCC flight_index
@@ -41,15 +101,18 @@ cdef class FlightIndex:
     cpdef push_flight(
         self, id: flight_t, src: vertex_t, dst: vertex_t,
         start_time: flight_time_t, day_start_time: flight_time_t,
-        duration: flight_duration_t, cost: cost_t
+        day_end_time: flight_time_t, duration: flight_duration_t, cost: cost_t
     ):
-        self.flight_index.push_flight(id, src, dst, start_time, day_start_time, duration, cost)
+        self.flight_index.push_flight(
+            id, src, dst, start_time, day_start_time,
+            day_end_time, duration, cost
+        )
 
     cpdef sort_flights(self):
         self.flight_index.sort_flights()
 
     cpdef FlightsList select_flights(
-        self, src: Set[vertex_t], dst: Set[vertex_t],
+        self, src: set[vertex_t], dst: set[vertex_t],
         start_time: flight_time_t, end_time: flight_time_t
     ):
         cdef vector[vertex_t] src_v = src
@@ -548,11 +611,11 @@ cdef class TravelSearchSettings:
         )
 
 
-cpdef TravelsList find_best_single_trip(
+cpdef list[FlightTravel] find_best_single_trip(
     start_city: vertex_t, start_time: flight_time_t,
     flights: FlightsList,
     settings: TravelSearchSettings,
-    city_costs: Dict[vertex_t, cost_t]
+    city_costs: dict[vertex_t, cost_t]
 ):
     cdef map_cc[vertex_t, cost_t] city_costs_cc
     cdef vertex_t py_key
@@ -564,9 +627,12 @@ cpdef TravelsList find_best_single_trip(
             raise TypeError("Dictionary keys values must be float city costs")
         city_costs_cc[py_key] = py_value
 
-    r = TravelsList()
-    r.travels = find_best_single_trip_cc(
+    r = []
+    for travel_cc in find_best_single_trip_cc(
         start_city, start_time, flights.flights,
         settings.cc_obj, city_costs_cc
-    )
+    ):
+        travel = FlightTravel()
+        travel.cc_obj = travel_cc
+        r.append(travel)
     return r

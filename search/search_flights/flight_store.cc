@@ -2,24 +2,30 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
 
 void FlightIndex::push_flight(
-    flight_t id, vertex_t src, vertex_t dst,
-    flight_time_t start_time, flight_time_t day_start_time,
-    flight_duration_t duration, cost_t cost
-) {
-    sorted = false;
-    flights.push_back({
-        .id = id, .src = src, .dst = dst,
-        .start_time = start_time, .day_start_time = day_start_time,
-        .duration = duration, .cost = cost,
-    });
+    flight_t id, vertex_t src, vertex_t dst, flight_time_t start_time,
+    flight_time_t day_start_time, flight_time_t day_end_time,
+    flight_duration_t duration, cost_t cost) {
+  sorted = false;
+  flights.push_back({
+      .id = id,
+      .src = src,
+      .dst = dst,
+      .start_time = start_time,
+      .day_start_time = day_start_time,
+      .day_end_time = day_end_time,
+      .duration = duration,
+      .cost = cost,
+  });
 }
 
 void FlightIndex::sort_flights() {
     if (!sorted) {
         std::sort(flights.begin(), flights.end(), FlightCompareVertex());
+        std::cout << flights.back().id << std::endl;
         sorted = true;
     }
 }
@@ -47,9 +53,12 @@ std::vector<Flight> FlightIndex::select_flights(
             auto end = std::upper_bound(
                 flights.begin(), flights.end(), search_flight, FlightCompareVertex()
             );
-            out.reserve(out.size() + std::distance(start, end));
-            out.insert(out.end(), start, end);
+            if (start != end) {
+                out.reserve(out.size() + std::distance(start, end));
+                out.insert(out.end(), start, end);
+            }
         }
     }
+    std::cout << out.size() << std::endl;
     return out;
 }
