@@ -4,7 +4,7 @@ from libcpp.map cimport map as map_cc
 from .flight_optim_ccexport cimport (
     flight_t, travel_t, vertex_t, flight_time_t, flight_duration_t, cost_t,
     compute_day_scores as compute_day_scores_cc, find_best_single_trip as find_best_single_trip_cc,
-    FlightTravel as FlightTravelCC, FlightIndex as FlightIndexCC,
+    Flight as FlightCC, FlightTravel as FlightTravelCC, FlightIndex as FlightIndexCC,
     DiffCostSettings as DiffCostSettingsCC,
     DayScorer as DayScorerCC,
     TravelCoverSettings as TravelCoverSettingsCC,
