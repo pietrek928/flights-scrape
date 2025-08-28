@@ -13,6 +13,64 @@ from .flight_optim_ccexport cimport (
 )
 
 
+cdef class Flight:
+    cdef FlightCC cc_obj
+
+    def __init__(
+        self, id: flight_t = 0, src: vertex_t = 0, dst: vertex_t = 0,
+        start_time: flight_time_t = 0, day_start_time: flight_time_t = 0,
+        day_end_time: flight_time_t = 0, duration: flight_duration_t = 0, cost: cost_t = 0
+    ):
+        self.cc_obj.id = id
+        self.cc_obj.src = src
+        self.cc_obj.dst = dst
+        self.cc_obj.start_time = start_time
+        self.cc_obj.day_start_time = day_start_time
+        self.cc_obj.day_end_time = day_end_time
+        self.cc_obj.duration = duration
+        self.cc_obj.cost = cost
+
+    @property
+    def id(self) -> flight_t:
+        return self.cc_obj.id
+
+    @property
+    def src(self) -> vertex_t:
+        return self.cc_obj.src
+
+    @property
+    def dst(self) -> vertex_t:
+        return self.cc_obj.dst
+
+    @property
+    def start_time(self) -> flight_time_t:
+        return self.cc_obj.start_time
+
+    @property
+    def day_start_time(self) -> flight_time_t:
+        return self.cc_obj.day_start_time
+
+    @property
+    def day_end_time(self) -> flight_time_t:
+        return self.cc_obj.day_end_time
+
+    @property
+    def duration(self) -> flight_duration_t:
+        return self.cc_obj.duration
+
+    @property
+    def cost(self) -> cost_t:
+        return self.cc_obj.cost
+
+    def __repr__(self):
+        return (
+            f"Flight(id={self.id}, src={self.src}, dst={self.dst}, "
+            f"start_time={self.start_time}, day_start_time={self.day_start_time}, "
+            f"day_end_time={self.day_end_time}, duration={self.duration}, "
+            f"cost={self.cost})"
+        )
+
+
 cdef class FlightTravel:
     cdef FlightTravelCC cc_obj
 
@@ -84,10 +142,10 @@ cdef class FlightsList:
 
 
 cdef class TravelsList:
-    cdef vector[FlightTravelCC] _travels
+    cdef vector[FlightTravelCC] travels
 
     cdef size(self):
-        return self._travels.size()
+        return self.travels.size()
 
     def __repr__(self):
         return (
@@ -129,6 +187,12 @@ cdef class FlightIndex:
         return (
             f"FlightsIndex(len={self.flight_index.size()})"
         )
+
+    def __iter__(self):
+        for i in range(self.flight_index.get_flights().size()):
+            f = Flight()
+            f.cc_obj = self.flight_index.get_flights()[i]
+            yield f
 
 
 cdef class DiffCostSettings:

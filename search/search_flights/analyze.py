@@ -1,7 +1,6 @@
 import os
 import json
 import lzma as xz
-import numpy as np
 from datetime import datetime, timedelta
 
 from .flight_optim import (
@@ -35,11 +34,11 @@ def flight_id_to_int(flight_id):
     return int(clean_id[:2], 36) * int(1e6) + int(clean_id[2:],)
 
 
-def int_to_flight_id(numeric_id):
-    return (
-        np.base_repr(numeric_id // int(1e6), 36).upper()
-        + f'{numeric_id % int(1e6):04d}'
-    )
+# def int_to_flight_id(numeric_id):
+#     return (
+#         np.base_repr(numeric_id // int(1e6), 36).upper()
+#         + f'{numeric_id % int(1e6):04d}'
+#     )
 
 
 def load_ryanair_flights(root_dir):
@@ -78,7 +77,8 @@ def load_ryanair_flights(root_dir):
 def find_flights():
     flights, city_idx = load_ryanair_flights('/run/media/pietrek/C068DF4C68DF4038/data/datasets/ryanair')
     flights.sort_flights()
-    print(flights)
+    for f in iter(flights):
+        print(f)
 
     day_scorer = DayScorer((1, 2, 3, 4), start_time=.01)
     city_costs = {}
@@ -93,7 +93,7 @@ def find_flights():
         wait_time=DiffCostSettings(desired_value=2/24, down_factor=30., up_factor=5.),
         trip_duration=DiffCostSettings(desired_value=2., down_factor=10., up_factor=10.),
         flight_duration=DiffCostSettings(desired_value=3., down_factor=.01, up_factor=1.),
-        cover_settings=TravelCoverSettings(back_cost_factor=1., forward_cost_factor=1., time_back=7.),
+        cover_settings=TravelCoverSettings(back_cost_factor=100., forward_cost_factor=100., time_back=7.),
         move_cost=100.
     )
 
@@ -112,7 +112,8 @@ def find_flights():
         city_costs=city_costs
     )
     print(len(trips))
-    # print(trips)
+    for t in trips:
+        print(t)
     # trips.show()
 
 

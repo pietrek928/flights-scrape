@@ -23,6 +23,9 @@ class FlightIndex {
     FlightIndex() {}
     FlightIndex(const std::vector<Flight> &init_flights)
         : flights(init_flights.begin(), init_flights.end()) {}
+    inline const auto &get_flights() const {
+        return flights;
+    }
     void push_flight(
         flight_t id, vertex_t src, vertex_t dst,
         flight_time_t start_time, flight_time_t day_start_time,

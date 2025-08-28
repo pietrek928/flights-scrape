@@ -11,14 +11,20 @@ cdef extern from "flight_structure.h":
     ctypedef int travel_t
 
     cdef cppclass Flight:
-        pass
+        flight_t id
+        vertex_t src
+        vertex_t dst
+        flight_time_t start_time
+        flight_time_t day_start_time
+        flight_time_t day_end_time
+        flight_duration_t duration
+        cost_t cost
 
     cdef cppclass FlightTravel:
         travel_t id
         flight_t last_flight
         travel_t last_travel
         int flights_count
-
         flight_time_t end_time
         flight_time_t day_end_time
         cost_t cost
@@ -29,6 +35,7 @@ cdef extern from "flight_store.cc":
     cdef cppclass FlightIndex:
         FlightIndex()
         FlightIndex(const vector[Flight] &init_flights)
+        const vector[Flight] &get_flights()
         void push_flight(
             flight_t id, vertex_t src, vertex_t dst,
             flight_time_t start_time, flight_time_t day_start_time,

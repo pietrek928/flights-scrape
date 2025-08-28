@@ -25,7 +25,6 @@ void FlightIndex::push_flight(
 void FlightIndex::sort_flights() {
     if (!sorted) {
         std::sort(flights.begin(), flights.end(), FlightCompareVertex());
-        std::cout << flights.back().id << std::endl;
         sorted = true;
     }
 }
