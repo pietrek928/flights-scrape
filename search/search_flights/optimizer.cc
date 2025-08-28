@@ -233,15 +233,14 @@ auto extend_travels(
                 settings.flight_start_day_time,
                 settings.flight_duration
             );
-            if (new_travel_in.cost >= 1e8) {
-                continue;
-            }
-            new_travel_in.id = travel_id_inc;
-            if (push_travel(
-                new_travels_by_city[flight.dst], new_travel_in, settings.cover_settings
-            )) {
-                created_travels.push_back(new_travel_in);
-                ++travel_id_inc;
+            if (new_travel_in.cost < 1e8) {
+                new_travel_in.id = travel_id_inc;
+                if (push_travel(
+                    new_travels_by_city[flight.dst], new_travel_in, settings.cover_settings
+                )) {
+                    created_travels.push_back(new_travel_in);
+                    ++travel_id_inc;
+                }
             }
         }
 
@@ -255,15 +254,14 @@ auto extend_travels(
                 zero_cost,
                 settings.flight_duration
             );
-            if (new_travel_comp.cost >= 1e8) {
-                continue;
-            }
-            new_travel_comp.id = travel_id_inc;
-            if (push_travel(
-                new_travels_by_city[flight.dst], new_travel_comp, settings.cover_settings
-            )) {
-                created_travels.push_back(new_travel_comp);
-                ++travel_id_inc;
+            if (new_travel_comp.cost < 1e8) {
+                new_travel_comp.id = travel_id_inc;
+                if (push_travel(
+                    new_travels_by_city[flight.dst], new_travel_comp, settings.cover_settings
+                )) {
+                    created_travels.push_back(new_travel_comp);
+                    ++travel_id_inc;
+                }
             }
         }
     }
@@ -283,11 +281,10 @@ std::set<travel_t> select_used_travels(
 ) {
     std::set<travel_t> used_travels;
     for (auto travel_id : selected_travels) {
-        used_travels.insert(travel_id);
         auto travel_it = all_travels.find(travel_id);
         while (travel_it != all_travels.end()) {
-            travel_id = travel_it->second.last_travel;
             used_travels.insert(travel_id);
+            travel_id = travel_it->second.last_travel;
             travel_it = all_travels.find(travel_id);
         }
     }
@@ -370,6 +367,7 @@ std::vector<FlightTravel> find_best_single_trip(
     for (auto travel_id : select_used_travels(all_travels, from_city_travel_ids_list)) {
         res_travels.push_back(all_travels[travel_id]);
     }
+    std::sort(res_travels.begin(), res_travels.end(), TravelCompareTime());
     normalize_travel_ids(res_travels);
     return res_travels;
 }

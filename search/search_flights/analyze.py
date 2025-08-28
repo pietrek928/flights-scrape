@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import json
 import lzma as xz
@@ -31,7 +32,7 @@ def _city_to_num(idx, code):
 
 def flight_id_to_int(flight_id):
     clean_id = flight_id.replace(' ', '').upper()
-    return int(clean_id[:2], 36) * int(1e6) + int(clean_id[2:],)
+    return int(clean_id[:2], 36) * int(1e4) + int(clean_id[2:],)
 
 
 # def int_to_flight_id(numeric_id):
@@ -44,6 +45,7 @@ def flight_id_to_int(flight_id):
 def load_ryanair_flights(root_dir):
     city_idx = {}
     flights = FlightIndex()
+    flight_id_idx = defaultdict(int)
     date_base = datetime(2025, 1, 1)
 
     for root, _, files in os.walk(root_dir):
@@ -56,6 +58,9 @@ def load_ryanair_flights(root_dir):
                         for f in t['flights']:
                             if f.get('regularFare'):
                                 flight_id = flight_id_to_int(f['flightNumber'])
+                                flight_id_idx[flight_id] += 1
+                                flight_id = flight_id * 100 + flight_id_idx[flight_id]
+
                                 src = _city_to_num(city_idx, f['segments'][0]['origin'])
                                 dst = _city_to_num(city_idx, f['segments'][0]['destination'])
                                 date_start, date_end = f['timeUTC']
@@ -77,8 +82,8 @@ def load_ryanair_flights(root_dir):
 def find_flights():
     flights, city_idx = load_ryanair_flights('/run/media/pietrek/C068DF4C68DF4038/data/datasets/ryanair')
     flights.sort_flights()
-    for f in iter(flights):
-        print(f)
+    # for f in iter(flights):
+    #     print(f)
 
     day_scorer = DayScorer((1, 2, 3, 4), start_time=.01)
     city_costs = {}
