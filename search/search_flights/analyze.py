@@ -109,7 +109,8 @@ def find_flights():
     )
     print(selected_flights)
 
-    # TODO: fix wait time cost between flight forth and back
+    start_city_idx = _city_to_num(city_idx, 'WAW')
+    print('start city', start_city_idx)
     trips = find_best_single_trip(
         _city_to_num(city_idx, 'WAW'), 0.,
         flights=selected_flights,
