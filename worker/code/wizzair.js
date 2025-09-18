@@ -22,7 +22,6 @@ const query_available_dates = async (src_code, dst_code, date_start, date_end) =
 };
 
 
-
 const search_flight_details = async (src_code, dst_code, depart_date, opts) => {
     const url = `https://be.wizzair.com/${api_version}/Api/search/search`;
     const payload = `{"isFlightChange":false,"flightList":[{`
@@ -52,6 +51,7 @@ const search_flight_details = async (src_code, dst_code, depart_date, opts) => {
         fetch_date: new Date().toISOString(),
     };
 };
+
 
 console.log('YEEEEAH!!!!! Worker started xD');
 setTimeout(async () => {

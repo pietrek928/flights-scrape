@@ -23,7 +23,7 @@ const list_all_airports = async () => {
     };
 };
 
-const find_dest_airpoits = async (src_code) => {
+const find_dest_airports = async (src_code) => {
     const url = `https://www.ryanair.com/api/views/locate/searchWidget/routes/en/airport/${src_code}`;
 
     const response = await fetch(url, {
@@ -92,7 +92,7 @@ const process_fetch_dates = async (src_code, dst_code) => {
 
 const process_fetch_details = async (src_code, dst_code, date) => {
     const details = await query_flights_details(src_code, dst_code, date);
-    await save_data(details);
+    await save_data('ryanair', details);
 };
 
 const process_job = async () => {

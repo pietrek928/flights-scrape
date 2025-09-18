@@ -5,12 +5,16 @@
     "description": "Fetch flights data",
     "permissions": [
         "webRequest",
-        "scripting"
+        "scripting",
+        "debugger"
     ],
     "host_permissions": [
         "http://localhost:8090/*",
+
         "https://www.ryanair.com/*",
-        "https://www.wizzair.com/*"
+
+        "https://www.wizzair.com/*",
+        "https://be.wizzair.com/*"
     ],
     "content_scripts": [
         {
@@ -20,14 +24,9 @@
             "js": [
                 "ryanair.js"
             ]
-        },
-        {
-            "matches": [
-                "https://www.wizzair.com/en-gb/booking/select-flight/*"
-            ],
-            "js": [
-                "wizzair.js"
-            ]
         }
-    ]
+    ],
+    "background": {
+        "service_worker": "wizzair-bg.js"
+    }
 }

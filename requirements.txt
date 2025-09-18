@@ -1,5 +1,0 @@
-flask[async]
-flask-cors
-aiofiles
-gunicorn
-pydantic

@@ -1,4 +1,6 @@
-export const sleep = (base_s = 2000, rand_s = 5000) => new Promise((resolve) => setTimeout(resolve, base_s + Math.random() * rand_s))
+export const sleep = (base_s = 2., rand_s = 5.) => new Promise(
+    (resolve) => setTimeout(resolve, (base_s + Math.random() * rand_s) * 1e3)
+);
 
 export const init_iframe = () => {
     const iframe = document.createElement('iframe');
@@ -14,4 +16,3 @@ export const execute_in_iframe = (iframe, func) => {
     iframe_div.addEventListener('click', func);
     iframe_div.click();
 };
-

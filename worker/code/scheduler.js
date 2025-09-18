@@ -2,12 +2,13 @@ const manager_url = 'http://localhost:8090'
 const storage_url = `${manager_url}/storage`
 const scheduler_url = `${manager_url}/scheduler`
 
-export const save_data = async (data) => {
+
+export const save_data = async (dataset_name, data) => {
     const url = `${storage_url}/save_result`;
     const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
-            dataset_name: 'ryanair',
+            dataset_name: dataset_name,
             result: data,
         }),
         mode: "cors",
