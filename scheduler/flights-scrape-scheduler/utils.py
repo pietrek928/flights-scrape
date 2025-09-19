@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 import json
 from functools import wraps
+import logging
 from sys import exc_info
 from traceback import format_exception
 from typing import Dict
@@ -76,7 +77,7 @@ def new_id():
 def save_jobs(fname, jobs):
     with open(fname, 'w') as f:
         json.dump(safe_format_json(jobs), f)
-        print(f'Saved {len(jobs)} jobs as `{fname}`')
+        logging.info(f'Saved {len(jobs)} jobs as `{fname}`')
 
 
 def get_all_subclasses(base_cls):
@@ -97,7 +98,7 @@ def load_jobs(fname, base_cls):
             if job_type not in subclasses:
                 raise ValueError(f'Unknown job type: {job_type}')
             jobs[job_id] = subclasses[job_type].model_validate(job)
-        print(f'Loaded {len(jobs)} jobs from `{fname}`')
+        logging.info(f'Loaded {len(jobs)} jobs from `{fname}`')
     return jobs
 
 

@@ -68,7 +68,10 @@ def make_blueprint():
     try:
         JOBS.update(load_jobs(fname, Job))
     except FileNotFoundError:
-        JOBS.update(make_jobs(airports, airports, datetime.now(UTC).date, 7, 60))
+        JOBS.update({
+            str(job.id): job
+            for job in make_jobs(airports, airports, datetime.now(UTC).date(), 7, 60)
+        })
 
     atexit.register(partial(save_jobs, fname, JOBS))
     return wizzair_blueprint

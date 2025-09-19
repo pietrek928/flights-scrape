@@ -2,6 +2,7 @@
 # gunicorn -b '0.0.0.0:8090' --workers=1 --env=AIRPORTS=WAW,ALC,MAN --env=END_DATE=2025-08-01 'scheduler.scheduler:make_app()'
 
 import json
+import logging
 import lzma as xz
 from os import environ, makedirs, path
 from uuid import uuid4, UUID
@@ -33,7 +34,7 @@ async def save_result(dataset_name, result):
     obj_id = uuid4()
     obj_path = make_object_path(dataset_name, obj_id)
     fname = f'{obj_path}/{obj_id}.json.xz'
-    print(f'Saving result to {fname}')
+    logging.info(f'Saving result to {fname}')
     if path.isfile(fname):
         return await save_result(dataset_name, result)
 

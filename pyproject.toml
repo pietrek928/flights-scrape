@@ -1,11 +1,15 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "flights-scrape-scheduler"
 version = "0.1.0"
-description = "A short description of my project."
+authors = [
+  { name="Pietrek xD", email="pietrek.j@gmail.com" },
+]
+description = "Simple service scheduling scraping workers"
+requires-python = ">=3.12"
 dependencies = [
     "flask[async]",
     "flask-cors",
@@ -14,10 +18,5 @@ dependencies = [
     "pydantic"
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "scheduler/",
-]
+[tool.setuptools.packages.find]
+where = ["scheduler"]
