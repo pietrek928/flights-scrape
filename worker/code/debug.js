@@ -12,12 +12,12 @@ export const attachDebugger = async (tabId, api_version = "1.3") => {
 
 export const sendDebuggerCommand = async (tabId, command) => {
     return new Promise((resolve, reject) => {
-        chrome.debugger.sendCommand({ tabId: tabId }, command, {}, () => {
+        chrome.debugger.sendCommand({ tabId: tabId }, command, {}, (result) => {
             if (chrome.runtime.lastError) {
                 return reject(chrome.runtime.lastError.message);
             }
-            console.log(`'${command}' command complete.`);
-            resolve(); // Resolve the promise here
+            console.log(`'${command}' command complete. Result:`, result);
+            return resolve(result); // Resolve the promise here
         });
     });
 };

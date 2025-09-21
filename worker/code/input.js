@@ -40,3 +40,8 @@ export const sendKeys = async (tabId, text) => {
         });
     }
 };
+
+export const goTo = async (tabId, url) => {
+    await chrome.debugger.sendCommand({ tabId: tabId }, 'Page.navigate', { url: url });
+    await chrome.debugger.sendCommand({ tabId: tabId }, 'Page.loadEventFired');
+};

@@ -96,7 +96,7 @@ const process_fetch_details = async (src_code, dst_code, date) => {
 };
 
 const process_job = async () => {
-    const job_data = await fetch_job();
+    const job_data = await fetch_job('ryanair');
     console.log(job_data);
     if (!job_data) {
         console.log('No jobs available');
@@ -115,7 +115,7 @@ const process_job = async () => {
             throw new Error(`Unknown job type ${job_data.type}`);
     }
 
-    await complete_job(job_data.id);
+    await complete_job('ryanair', job_data.id);
 };
 
 const worker_process = async () => {

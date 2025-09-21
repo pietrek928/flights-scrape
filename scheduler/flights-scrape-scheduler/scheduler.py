@@ -54,9 +54,9 @@ def make_app():
     global END_DATE
 
     # We always need cors here
-    CORS(app, origins='*', supports_credentials=True)
     app.register_blueprint(ryanair.make_blueprint())
     app.register_blueprint(wizzair.make_blueprint())
+    CORS(app, origins='*', supports_credentials=True)
 
     return app
 

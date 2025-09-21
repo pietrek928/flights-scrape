@@ -1,10 +1,8 @@
 const manager_url = 'http://localhost:8090'
-const storage_url = `${manager_url}/storage`
-const scheduler_url = `${manager_url}/scheduler`
 
 
 export const save_data = async (dataset_name, data) => {
-    const url = `${storage_url}/save_result`;
+    const url = `${storage_url}/storage/save_result`;
     const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
@@ -18,8 +16,9 @@ export const save_data = async (dataset_name, data) => {
     }
 };
 
-export const fetch_job = async () => {
-    const url = `${scheduler_url}/fetch_job`;
+
+export const fetch_job = async (storage_name) => {
+    const url = `${manager_url}/${storage_name}/fetch_job`;
     const response = await fetch(url, {
         method: 'POST',
         body: '',
@@ -31,8 +30,9 @@ export const fetch_job = async () => {
     return await response.json();
 };
 
-export const complete_job = async (job_id) => {
-    const url = `${scheduler_url}/complete_job`;
+
+export const complete_job = async (storage_name, job_id) => {
+    const url = `${manager_url}/${storage_name}/complete_job`;
     const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
@@ -45,8 +45,9 @@ export const complete_job = async (job_id) => {
     }
 };
 
-export const save_flight_dates = async (src_code, dst_code, dates) => {
-    const url = `${scheduler_url}/save_flight_dates`;
+
+export const save_ryanair_flight_dates = async (src_code, dst_code, dates) => {
+    const url = `${manager_url}/ryanair/save_flight_dates`;
     const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
