@@ -46,25 +46,26 @@ async def run_jobs(
     try:
         working_jobs = set()
         while jobs or working_jobs:
-            free_workers = []
-            done, working_jobs = await wait(
-                working_jobs, return_when=FIRST_COMPLETED
-            )
-            for job_result in done:
-                worker, new_jobs, worker_jobs_limit = await job_result
-                if worker_jobs_limit > 0:
-                    free_workers.append((worker, worker_jobs_limit))
-                else:
-                    await worker.close()
-                if new_jobs:
-                    jobs.extend(new_jobs)
-                    shuffle(jobs)
+            if working_jobs:
+                free_workers = []
+                done, working_jobs = await wait(
+                    working_jobs, return_when=FIRST_COMPLETED
+                )
+                for job_result in done:
+                    worker, new_jobs, worker_jobs_limit = await job_result
+                    if worker_jobs_limit > 0:
+                        free_workers.append((worker, worker_jobs_limit))
+                    else:
+                        await worker.close()
+                    if new_jobs:
+                        jobs.extend(new_jobs)
+                        shuffle(jobs)
 
-            while free_workers and jobs:
-                worker, worker_jobs_limit = free_workers.pop()
-                working_jobs.add(create_task(
-                    _process_job(process_job, worker, jobs.pop(), worker_jobs_limit)
-                ))
+                while free_workers and jobs:
+                    worker, worker_jobs_limit = free_workers.pop()
+                    working_jobs.add(create_task(
+                        _process_job(process_job, worker, jobs.pop(), worker_jobs_limit)
+                    ))
 
             while len(working_jobs) < max_workers and jobs:
                 working_jobs.add(create_task(
