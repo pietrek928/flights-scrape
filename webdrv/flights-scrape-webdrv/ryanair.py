@@ -1,22 +1,23 @@
+import logging
+from functools import partial
 from datetime import datetime, timedelta
-from typing import Tuple
-from pydantic import BaseModel
+from typing import Tuple, Optional
+import websockets
 
-from .utils import new_id
+from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result
+from .job import Job, load_jobs, run_jobs
 
 
 RYANAIR_API_URL = 'https://www.ryanair.com/api'
 
 
-class Job(BaseModel):
-    id: str
-
-
 class QueryDatesJob(Job):
     src_code: str
     dst_code: str
+    start_date: str
+    end_date: str
 
 
 class QueryFlightsJob(Job):
@@ -50,18 +51,17 @@ def make_dates_jobs(
         )
 
 
-def init_jobs(airports):
-    jobs = {}
+def init_jobs(airports, start_date, end_date):
     for a1 in airports:
         for a2 in airports:
             if a1 != a2:
-                job = QueryDatesJob(
+                yield QueryDatesJob(
                     id=new_id(),
                     src_code=a1,
                     dst_code=a2,
+                    start_date=start_date,
+                    end_date=end_date,
                 )
-                jobs[job.id] = job
-    return jobs
 
 
 RYANAIR_HEADERS = {
@@ -119,62 +119,32 @@ async def query_flights_details(
     )
 
 
-# const process_fetch_dates = async (src_code, dst_code) => {
-#     const dates = await query_available_dates(src_code, dst_code);
-#     await save_flight_dates(src_code, dst_code, dates.dates);
-# };
+async def make_worker(conn):
+    ws_url = await conn.open_new_tab()
+    websocket = await websockets.connect(ws_url).__aenter__()
+    tab = WSTab(websocket)
+    await tab.send_command("Page.enable")
+    await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
+    await sleep_rand(4, 6)
+    return tab
 
-# const process_fetch_details = async (src_code, dst_code, date) => {
-#     const details = await query_flights_details(src_code, dst_code, date);
-#     await save_data('ryanair', details);
-# };
 
-# const process_job = async () => {
-#     const job_data = await fetch_job('ryanair');
-#     console.log(job_data);
-#     if (!job_data) {
-#         console.log('No jobs available');
-#         return;
-#     }
-#     console.log('Fetched job', job_data);
-
-#     switch(job_data.type_) {
-#         case 'QueryDatesJob':
-#             await process_fetch_dates(job_data.src_code, job_data.dst_code);
-#             break;
-#         case 'QueryFlightsJob':
-#             await process_fetch_details(job_data.src_code, job_data.dst_code, job_data.date);
-#             break;
-#         default:
-#             throw new Error(`Unknown job type ${job_data.type}`);
-#     }
-
-#     await complete_job('ryanair', job_data.id);
-# };
-
-async def process_job(tab: WSTab, job: Job):
+async def process_job(tab: WSTab, job: Job) -> Optional[Tuple[Job, ...]]:
     print('Processing job', job)
     if isinstance(job, QueryDatesJob):
         dates_data = await query_available_dates(tab, job.src_code, job.dst_code)
-        print('Available dates:', dates_data)
-        new_jobs = list(make_dates_jobs(job.src_code, job.dst_code, (
-            d for d in dates_data['dates'] if d <= END_DATE
-        )))
-        JOBS.update({
-            job.id: job for job in new_jobs
-        })
-        # return dates_data | {
-        #     'type': 'dates',
-        #     'src_code': job.src_code,
-        #     'dst_code': job.dst_code
-        # }
+        logging.info('Available dates:', dates_data)
+        dates = tuple(
+            d for d in dates_data['dates'] if job.start_date <= d <= job.end_date
+        )
+        return tuple(make_dates_jobs(job.src_code, job.dst_code, dates))
     elif isinstance(job, QueryFlightsJob):
         date_parsed = datetime.strptime(job.date, '%Y-%m-%d')
         details_data = await query_flights_details(
             tab, job.src_code, job.dst_code, date_parsed,
             days_before=job.days_before, days_after=job.days_after
         )
-        print('Flight details:', details_data)
+        logging.info('Flight details:', details_data)
         await save_result('ryanair', details_data | {
             'type': 'details',
             'src_code': job.src_code,
@@ -183,3 +153,15 @@ async def process_job(tab: WSTab, job: Job):
         })
     else:
         raise ValueError(f'Unknown job type: {job}')
+
+
+async def download_ryanair(browser_conn, airports, start_date, end_date):
+    try:
+        jobs = load_jobs('ryanair_jobs.json', Job)
+    except FileNotFoundError:
+        jobs = tuple(init_jobs(airports, start_date, end_date))
+    await run_jobs(
+        jobs, process_job, partial(make_worker, browser_conn),
+        max_workers=1, max_worker_jobs=1,
+        save_jobs_fname='ryanair_jobs.json'
+    )

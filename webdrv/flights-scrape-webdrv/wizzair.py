@@ -1,13 +1,9 @@
 from typing import Tuple
-from pydantic import BaseModel
 from datetime import datetime, timedelta
 
 from .utils import new_id
 from .webdrv import WSTab
-
-
-class Job(BaseModel):
-    id: str
+from .job import Job
 
 
 class QueryJobs(Job):

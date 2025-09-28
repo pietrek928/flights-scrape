@@ -1,15 +1,15 @@
 from base64 import b64decode
 from asyncio import Task
 from random import uniform
-from typing import AsyncIterator
+from typing import AsyncIterator, Tuple
 
 from .utils import sleep_rand
 from .webdrv import WSTab
 
 
 async def left_click(tab: WSTab, x, y, rand_move=15):
-    x += uniform() * (2*rand_move) - rand_move
-    y += uniform() * (2*rand_move) - rand_move
+    x += uniform(-rand_move, rand_move)
+    y += uniform(-rand_move, rand_move)
     await tab.left_click(x, y, 'mousePressed')
     await sleep_rand(.1, .15)
     await tab.left_click(x, y, 'mouseReleased')
@@ -79,10 +79,10 @@ async def get_response_body(tab: WSTab, request_id: str):
         print(f'Failed to get response body: {data["error"]}')
 
 
-async def fetch_requests_body(tab: WSTab, url_prefix: str) -> AsyncIterator[Task[dict]]:
+async def fetch_requests_body(tab: WSTab, url_prefix: str) -> AsyncIterator[Tuple[str, str]]:
     async for params in tab.listen_method('Network.responseReceived'):
         request_id = params['requestId']
         response = params['response']
         url = response['url']
         if url.startswith(url_prefix):
-            yield url, get_response_body(tab, request_id)
+            yield url, request_id

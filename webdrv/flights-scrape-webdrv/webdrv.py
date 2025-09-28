@@ -145,3 +145,6 @@ class WSTab:
             userGesture=True,
             awaitPromise=True
         )
+
+    async def close(self):
+        await self.run_code('window.close()')

@@ -20,7 +20,7 @@ def safe_format_json(o):
         return {
             k: safe_format_json(v) for k, v in o.items()
         }
-    elif isinstance(o, (list, tuple)):
+    elif isinstance(o, (list, tuple, set)):
         return tuple(
             safe_format_json(v) for v in o
         )
@@ -32,12 +32,6 @@ def safe_format_json(o):
         return o
 
 
-def save_jobs(fname, jobs):
-    with open(fname, 'w') as f:
-        json.dump(safe_format_json(jobs), f)
-        logging.info(f'Saved {len(jobs)} jobs as `{fname}`')
-
-
 def get_all_subclasses(base_cls):
     all_subclasses = {
         base_cls.__name__: base_cls
@@ -45,16 +39,3 @@ def get_all_subclasses(base_cls):
     for subclass in base_cls.__subclasses__():
         all_subclasses.update(get_all_subclasses(subclass))
     return all_subclasses
-
-
-def load_jobs(fname, base_cls):
-    subclasses = get_all_subclasses(base_cls)
-    with open(fname) as f:
-        jobs = {}
-        for job_id, job in json.load(f).items():
-            job_type = job.pop('type_')
-            if job_type not in subclasses:
-                raise ValueError(f'Unknown job type: {job_type}')
-            jobs[job_id] = subclasses[job_type].model_validate(job)
-        logging.info(f'Loaded {len(jobs)} jobs from `{fname}`')
-    return jobs

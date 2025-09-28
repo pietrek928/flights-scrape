@@ -1,12 +1,14 @@
 from asyncio import create_task, run
-import json
+from click import command, option
+from datetime import datetime, timedelta
+import logging
 import httpx
 import websockets
 
 from .utils import sleep_rand
 from .webdrv import BrowserConnection, WSTab
 from .control import fetch_requests_body, get_element_center, get_next_element_center
-from .ryanair import list_all_airports
+from .ryanair import download_ryanair
 
 
 async def test():
@@ -32,4 +34,34 @@ async def test():
             # print(await get_next_element_center(tab, '.is-date-selected'))
             # print(await list_all_airports(tab))
 
-run(test())
+
+def parse_list(v: str):
+    return tuple(sorted(set(s.strip() for s in v.split(','))))
+
+
+@command()
+@option('--providers', type=str, default='ryanair,wizzair')
+@option('--airports', type=str, default='WAW,ALC,MAN')
+@option('--start-date', type=str, default=datetime.now().strftime('%Y-%m-%d'))
+@option('--end-date', type=str, default=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'))
+@option('--browser-url', type=str, default='http://127.0.0.1:9222')
+async def scrape(providers, airports, start_date, end_date):
+    providers = parse_list(providers)
+    airports = parse_list(airports)
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+
+    logging.basicConfig(level=logging.INFO)
+    async with httpx.AsyncClient() as client:
+        conn = BrowserConnection(client, 'http://127.0.0.1:9222')
+        tasks = []
+        if 'ryanair' in providers:
+            tasks.append(create_task(download_ryanair(
+                conn, airports, start_date, end_date
+            )))
+
+
+# logging.basicConfig(level=logging.INFO)
+# run(test())
+if __name__ == '__main__':
+    run(scrape())
