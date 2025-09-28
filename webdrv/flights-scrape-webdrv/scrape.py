@@ -63,5 +63,5 @@ async def scrape(providers, airports, start_date, end_date):
 
 # logging.basicConfig(level=logging.INFO)
 # run(test())
-if __name__ == '__main__':
-    run(scrape())
+# if __name__ == '__main__':
+#     run(scrape())

@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flights-scrape-webdrv"
+name = "flights_scrape_webdrv"
 version = "0.1.0"
 authors = [
   { name="Pietrek xD", email="pietrek.j@gmail.com" },
@@ -16,6 +16,9 @@ dependencies = [
     "websockets",
     "click"
 ]
+
+[project.scripts]
+scrape-flights = "flights_scrape_webdrv.scrape:scrape"
 
 [tool.setuptools.packages.find]
 where = ["webdrv"]
