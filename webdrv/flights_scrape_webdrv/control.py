@@ -1,7 +1,7 @@
 from base64 import b64decode
 from asyncio import Task
 from random import uniform
-from typing import AsyncIterator, Tuple
+from typing import AsyncIterator, Optional, Tuple
 
 from .utils import sleep_rand
 from .webdrv import WSTab
@@ -25,27 +25,32 @@ async def get_element_center(tab: WSTab, selector: str):
         return [rect.left + rect.width / 2, rect.top + rect.height / 2];
     }});
     ''', bind=True)
-    return await tab.wait_for_event(result_key)
+    return (await tab.wait_for_event(result_key))['value']
 
 
-async def get_next_element_center(tab: WSTab, selector: str):
-    result_key = await tab.run_code('''((selector) => {
+async def get_next_element_center(tab: WSTab, selector: str, sub_selector: Optional[str] = None):
+    result_key = await tab.run_code('''((selector, sub_selector) => {
         const centers = [];
         Array.from(
             document.querySelectorAll(selector)
         ).forEach(element => {
             element = element.nextElementSibling;
-            aaaa
             if (!element) {
                 return;
+            }
+            if (sub_selector) {
+                element = element.querySelector(sub_selector);
+                if (!element) {
+                    return;
+                }
             }
             const rect = element.getBoundingClientRect();
             centers.push([rect.left + rect.width / 2, rect.top + rect.height / 2]);
         });
         return centers;
     })'''
-    f'''('{selector}')''', bind=True)
-    return await tab.wait_for_event(result_key)
+    f'''('{selector}', '{sub_selector or ''}')''', bind=True)
+    return (await tab.wait_for_event(result_key))['value']
 
 
 async def get_element_text(tab: WSTab, selector: str):
@@ -54,7 +59,7 @@ async def get_element_text(tab: WSTab, selector: str):
         document.querySelectorAll('{selector}')
     ).map(element => element.textContent);
     ''', bind=True)
-    return await tab.wait_for_event(result_key)
+    return (await tab.wait_for_event(result_key))['value']
 
 
 async def save_post_payloads(tab: WSTab, payloads_store: dict, url_prefix: str):

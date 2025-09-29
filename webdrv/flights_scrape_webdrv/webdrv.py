@@ -118,14 +118,14 @@ class WSTab:
         return await self.send_command('Page.navigate', url=url)
 
     # mousePressed, mouseReleased
-    async def left_click(self, x, y, event_type, click_cunt=1):
+    async def left_click(self, x, y, event_type, click_count=1):
         return await self.send_command(
             'Input.dispatchMouseEvent',
             type=event_type,
             x=x,
             y=y,
             button='left',
-            clickCount=click_cunt
+            clickCount=click_count
         )
 
     async def cursor_move(self, x, y):
@@ -151,3 +151,10 @@ class WSTab:
 
     async def close(self):
         await self.send_command('Page.close')
+
+        for e in self.events.values():
+            if isinstance(e, Future):
+                e.cancel()
+            elif isinstance(e, Queue):
+                await e.shutdown()
+        self.events.clear()

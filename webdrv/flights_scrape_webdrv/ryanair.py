@@ -14,14 +14,14 @@ from .job import Job, load_jobs, run_jobs
 RYANAIR_API_URL = 'https://www.ryanair.com/api'
 
 
-class QueryDatesJob(Job):
+class QueryRyanairDates(Job):
     src_code: str
     dst_code: str
     start_date: str
     end_date: str
 
 
-class QueryFlightsJob(Job):
+class QueryRyanairFlights(Job):
     src_code: str
     dst_code: str
     date: str
@@ -42,7 +42,7 @@ def make_dates_jobs(
         while dates and dates[-1] >= date_start:
             dates.pop()
 
-        yield QueryFlightsJob(
+        yield QueryRyanairFlights(
             id=new_id(),
             src_code=src_code,
             dst_code=dst_code,
@@ -56,7 +56,7 @@ def init_jobs(airports, start_date, end_date):
     for a1 in airports:
         for a2 in airports:
             if a1 != a2:
-                yield QueryDatesJob(
+                yield QueryRyanairDates(
                     id=new_id(),
                     src_code=a1,
                     dst_code=a2,
@@ -134,14 +134,14 @@ async def make_worker(conn):
 
 async def process_job(tab: WSTab, job: Job) -> Optional[Tuple[Job, ...]]:
     logging.info(f'Processing job {job}')
-    if isinstance(job, QueryDatesJob):
+    if isinstance(job, QueryRyanairDates):
         dates_data = await query_available_dates(tab, job.src_code, job.dst_code)
         logging.info(f'Available dates: {dates_data}')
         dates = tuple(
             d for d in dates_data['value']['result'] if job.start_date <= d <= job.end_date
         )
         return tuple(make_dates_jobs(job.src_code, job.dst_code, dates))
-    elif isinstance(job, QueryFlightsJob):
+    elif isinstance(job, QueryRyanairFlights):
         date_parsed = datetime.strptime(job.date, '%Y-%m-%d')
         details_data = await query_flights_details(
             tab, job.src_code, job.dst_code, date_parsed,
