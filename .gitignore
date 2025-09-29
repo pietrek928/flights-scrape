@@ -1,4 +1,5 @@
 # data files
+data
 **/*.log
 **/*.db
 **/*.sqlite3

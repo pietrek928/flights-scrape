@@ -21,14 +21,15 @@ async def test():
             await tab.send_command("Network.enable")
             await tab.send_command("Page.enable")
             await tab.send_command('Page.navigate', url='https://www.wizzair.com/en-gb/booking/select-flight/WAW/CPH/2025-09-27/null/1/0/0/null')
-            # await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
-            create_task(tab.process_events())
+            await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
+            # create_task(tab.process_events())
 
             print("Connected to Brave via WebSocket!")
             await sleep_rand(1, 2)
-            async for url, content_future in fetch_requests_body(tab, 'https://be.wizzair.com'):
-                content = await content_future
-                print(url, content)
+            # async for url, content_future in fetch_requests_body(tab, 'https://be.wizzair.com'):
+            #     content = await content_future
+            #     print(url, content)
+            await tab.close()
 
             # print(await get_element_center(tab, '.is-date-selected'))
             # print(await get_next_element_center(tab, '.is-date-selected'))
@@ -44,6 +45,9 @@ async def scrape_(browser_url, providers, airports, start_date, end_date):
     airports = parse_list(airports)
 
     logging.basicConfig(level=logging.INFO)
+    logging.info(f'Providers: {providers}')
+    logging.info(f'Airports: {airports}')
+
     async with httpx.AsyncClient() as client:
         conn = BrowserConnection(client, browser_url)
         tasks = []
@@ -52,6 +56,7 @@ async def scrape_(browser_url, providers, airports, start_date, end_date):
                 conn, airports, start_date, end_date
             )))
         await gather(*tasks)
+
 
 @command()
 @option('--browser-url', type=str, default='http://127.0.0.1:9222')
@@ -63,7 +68,7 @@ def scrape(browser_url, providers, airports, start_date, end_date):
     return run(scrape_(browser_url, providers, airports, start_date, end_date))
 
 
-# logging.basicConfig(level=logging.INFO)
 # run(test())
 # if __name__ == '__main__':
-#     run(scrape())
+#     logging.basicConfig(level=logging.INFO)
+#     run(test())

@@ -1,3 +1,4 @@
+from asyncio import create_task, shield
 import logging
 from functools import partial
 from datetime import datetime, timedelta
@@ -71,7 +72,7 @@ RYANAIR_HEADERS = {
 
 
 async def make_ryanair_request(tab: WSTab, url: str):
-    print(f'Ryanair: {url}')
+    logging.info(f'Ryanair: {url}')
     msg_id = await tab.run_code('''(async (url, common_headers) => {
         const response = await fetch(url, {
             method: 'GET',
@@ -123,19 +124,21 @@ async def make_worker(conn):
     ws_url = await conn.open_new_tab()
     websocket = await websockets.connect(ws_url).__aenter__()
     tab = WSTab(websocket)
+    shield(create_task(tab.process_events()))
     await tab.send_command("Page.enable")
     await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
     await sleep_rand(4, 6)
+    logging.info('Ryanair tab opened')
     return tab
 
 
 async def process_job(tab: WSTab, job: Job) -> Optional[Tuple[Job, ...]]:
-    print('Processing job', job)
+    logging.info(f'Processing job {job}')
     if isinstance(job, QueryDatesJob):
         dates_data = await query_available_dates(tab, job.src_code, job.dst_code)
-        logging.info('Available dates:', dates_data)
+        logging.info(f'Available dates: {dates_data}')
         dates = tuple(
-            d for d in dates_data['dates'] if job.start_date <= d <= job.end_date
+            d for d in dates_data['value']['result'] if job.start_date <= d <= job.end_date
         )
         return tuple(make_dates_jobs(job.src_code, job.dst_code, dates))
     elif isinstance(job, QueryFlightsJob):
@@ -144,7 +147,7 @@ async def process_job(tab: WSTab, job: Job) -> Optional[Tuple[Job, ...]]:
             tab, job.src_code, job.dst_code, date_parsed,
             days_before=job.days_before, days_after=job.days_after
         )
-        logging.info('Flight details:', details_data)
+        logging.info(f'Flight details: {details_data}')
         await save_result('ryanair', details_data | {
             'type': 'details',
             'src_code': job.src_code,
@@ -162,6 +165,6 @@ async def download_ryanair(browser_conn, airports, start_date, end_date):
         jobs = tuple(init_jobs(airports, start_date, end_date))
     await run_jobs(
         jobs, process_job, partial(make_worker, browser_conn),
-        max_workers=1, max_worker_jobs=1,
+        max_workers=1, max_worker_jobs=8,
         save_jobs_fname='ryanair_jobs.json'
     )

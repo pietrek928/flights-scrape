@@ -1,6 +1,7 @@
 from asyncio import Future, Queue
 import json
 from httpx import AsyncClient
+from websockets import ConnectionClosedError
 
 
 class BrowserConnection:
@@ -94,9 +95,11 @@ class WSTab:
             await evt.put(value)
 
     async def process_events(self):
-        async for message in self.websocket:
-            # print(message[:1024 * 8])
-            await self.process_message(json.loads(message))
+        try:
+            async for message in self.websocket:
+                await self.process_message(json.loads(message))
+        except ConnectionClosedError:
+            pass
 
     async def send_command(self, method, bind=False, **params):
         message_id = self.message_id
@@ -147,4 +150,4 @@ class WSTab:
         )
 
     async def close(self):
-        await self.run_code('window.close()')
+        await self.send_command('Page.close')
