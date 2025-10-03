@@ -9,7 +9,7 @@ from .utils import sleep_rand
 from .webdrv import BrowserConnection, WSTab
 from .control import fetch_requests_body, get_element_center, get_next_element_center
 from .ryanair import download_ryanair
-from .wizzair import QueryWizzairFlights, process_job
+from .wizzair import QueryWizzairFlights, download_wizzair, process_job
 
 
 async def test():
@@ -19,9 +19,11 @@ async def test():
 
         async with websockets.connect(ws_url) as websocket:
             tab = WSTab(websocket)
-            await tab.send_command("Network.enable")
-            await tab.send_command("Input.enable")
+            # await tab.send_command("Network.enable")
+            # await tab.send_command("Input.enable")
             await tab.send_command("Page.enable")
+            # await tab.send_command("DOM.enable")
+            # await tab.send_command("Overlay.enable")
             # await tab.send_command('Page.navigate', url='https://www.wizzair.com/en-gb/booking/select-flight/WAW/CPH/2025-09-27/null/1/0/0/null')
             # await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
             create_task(tab.process_events())
@@ -53,6 +55,8 @@ def parse_list(v: str):
 async def scrape_(browser_url, providers, airports, start_date, end_date):
     providers = parse_list(providers)
     airports = parse_list(airports)
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
 
     logging.basicConfig(level=logging.INFO)
     logging.info(f'Providers: {providers}')
@@ -65,6 +69,12 @@ async def scrape_(browser_url, providers, airports, start_date, end_date):
             tasks.append(create_task(download_ryanair(
                 conn, airports, start_date, end_date
             )))
+        if 'wizzair' in providers:
+            tasks.append(create_task(download_wizzair(
+                conn, airports, start_date, end_date
+            )))
+        if not tasks:
+            raise ValueError(f'No valid providers selected: {providers}')
         await gather(*tasks)
 
 
@@ -79,6 +89,6 @@ def scrape(browser_url, providers, airports, start_date, end_date):
 
 
 # run(test())
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    run(test())
+# if __name__ == '__main__':
+#     logging.basicConfig(level=logging.INFO)
+#     run(test())

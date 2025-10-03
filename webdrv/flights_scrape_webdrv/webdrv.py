@@ -97,6 +97,7 @@ class WSTab:
     async def process_events(self):
         try:
             async for message in self.websocket:
+                # print(message)
                 await self.process_message(json.loads(message))
         except ConnectionClosedError:
             pass
@@ -135,6 +136,17 @@ class WSTab:
             x=x,
             y=y
         )
+    
+    async def highlight_square(self, x, y, size=10):
+        await self.send_command(
+            'Overlay.highlightRect',
+            x=int(x - size / 2),
+            y=int(y - size / 2),
+            width=int(size),
+            height=int(size),
+            color={'r': 255, 'g': 0, 'b': 0, 'a': 0.5},
+            outlineColor={'r': 255, 'g': 0, 'b': 0, 'a': 1.0},
+        )
 
     async def run_code(self, js_code, bind=False):
         return await self.send_command(
@@ -155,6 +167,4 @@ class WSTab:
         for e in self.events.values():
             if isinstance(e, Future):
                 e.cancel()
-            elif isinstance(e, Queue):
-                await e.shutdown()
         self.events.clear()

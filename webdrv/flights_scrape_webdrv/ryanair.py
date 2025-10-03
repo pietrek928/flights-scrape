@@ -60,8 +60,8 @@ def init_jobs(airports, start_date, end_date):
                     id=new_id(),
                     src_code=a1,
                     dst_code=a2,
-                    start_date=start_date,
-                    end_date=end_date,
+                    start_date=start_date.strftime('%Y-%m-%d'),
+                    end_date=end_date.strftime('%Y-%m-%d'),
                 )
 
 

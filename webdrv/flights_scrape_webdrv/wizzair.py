@@ -1,3 +1,4 @@
+from functools import partial
 import json
 import logging
 from asyncio import create_task, shield
@@ -5,11 +6,11 @@ from typing import Tuple
 from datetime import datetime, timedelta
 import websockets
 
-from .control import fetch_requests_body, get_element_center, get_element_text, get_next_element_center, get_response_body, left_click, save_post_payloads
+from .control import fetch_requests_body, get_element_center, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads
 from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result
-from .job import Job
+from .job import Job, load_jobs, run_jobs
 
 
 class QueryWizzairFlights(Job):
@@ -24,10 +25,12 @@ def count_dates_after(wizzair_dates, start_date, days):
     current_year = start_datetime.year
     dates = []
     for date_string in wizzair_dates:
-        parsed = datetime.strptime(date_string.strip(), "%a %d, %b")
-        dates.append(parsed.replace(year=current_year-1))
-        dates.append(parsed.replace(year=current_year))
-        dates.append(parsed.replace(year=current_year+1))
+        date_string = date_string.strip()
+        if date_string:
+            parsed = datetime.strptime(date_string.strip(), "%a %d, %b")
+            dates.append(parsed.replace(year=current_year-1))
+            dates.append(parsed.replace(year=current_year))
+            dates.append(parsed.replace(year=current_year+1))
     return sum(
         0 < (d - start_datetime).days <= days for d in dates
     )
@@ -82,9 +85,17 @@ async def process_job(tab: WSTab, job: Job) -> Tuple[Job, ...]:
         logging.info(f'Found {dates_after} wizzair dates')
 
         for _ in range(dates_after):
-            centers = await get_next_element_center(tab, r'[data-test="flight-date-picker-chart"] .column.is-date-selected', r'.date')
+            centers = await get_next_element_center(
+                tab,
+                r'[data-test="flight-date-picker-chart"] .column.is-date-selected',
+                r':not(.is-no-flight)',
+                r'.date'
+            )
             x, y = centers[0]
+            await move_mouse_sim(tab, 0, 0, x, y)
+            await sleep_rand(0.5, 0.3)
             await left_click(tab, x, y)
+            # await tab.highlight_square(x, y, size=30)
             print('click', x, y)
             await sleep_rand(8, 6)
 
@@ -106,3 +117,17 @@ async def make_worker(conn):
     await sleep_rand(4, 6)
     logging.info('Wizzair tab opened')
     return tab
+
+
+async def download_wizzair(browser_conn, airports, start_date, end_date):
+    try:
+        jobs = load_jobs('wizzair_jobs.json', Job)
+    except FileNotFoundError:
+        jobs = tuple(make_jobs(
+            airports, airports, start_date, days=6, max_days=(end_date - start_date).days + 1
+        ))
+    await run_jobs(
+        jobs, process_job, partial(make_worker, browser_conn),
+        max_workers=1, max_worker_jobs=8,
+        save_jobs_fname='ryanair_jobs.json'
+    )

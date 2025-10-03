@@ -16,6 +16,23 @@ async def left_click(tab: WSTab, x, y, rand_move=15):
     await sleep_rand(.1, .15)
 
 
+async def move_mouse_sim(tab: WSTab, x, y, xend, yend, max_move=100, a=0.2):
+    while True:
+        dx = xend - x
+        dy = yend - y
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist < 10:
+            break
+        dx /= dist
+        dy /= dist
+        if dist > max_move:
+            dist = max_move
+        x += dx * dist * uniform(1.0-a, 1.0+a)
+        y += dy * dist * uniform(1.0-a, 1.0+a)
+        await tab.cursor_move(x, y)
+        await sleep_rand(0.02, 0.07)
+
+
 async def get_element_center(tab: WSTab, selector: str):
     result_key = await tab.run_code(f'''
     Array.from(
@@ -28,13 +45,18 @@ async def get_element_center(tab: WSTab, selector: str):
     return (await tab.wait_for_event(result_key))['value']
 
 
-async def get_next_element_center(tab: WSTab, selector: str, sub_selector: Optional[str] = None):
-    result_key = await tab.run_code('''((selector, sub_selector) => {
+async def get_next_element_center(
+    tab: WSTab, selector: str, next_selector: str, sub_selector: Optional[str] = None
+):
+    result_key = await tab.run_code('''((selector, next_selector, sub_selector) => {
         const centers = [];
         Array.from(
             document.querySelectorAll(selector)
         ).forEach(element => {
             element = element.nextElementSibling;
+            while (element && !element.matches(next_selector)) {
+                element = element.nextElementSibling;
+            }
             if (!element) {
                 return;
             }
@@ -49,7 +71,7 @@ async def get_next_element_center(tab: WSTab, selector: str, sub_selector: Optio
         });
         return centers;
     })'''
-    f'''('{selector}', '{sub_selector or ''}')''', bind=True)
+    f'''('{selector}', '{next_selector}', '{sub_selector or ''}')''', bind=True)
     return (await tab.wait_for_event(result_key))['value']
 
 
