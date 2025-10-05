@@ -6,7 +6,7 @@ from typing import Tuple
 from datetime import datetime, timedelta
 import websockets
 
-from .control import fetch_requests_body, get_element_center, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads
+from .control import fetch_requests_body, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads
 from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result

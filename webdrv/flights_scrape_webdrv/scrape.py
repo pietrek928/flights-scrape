@@ -83,7 +83,7 @@ async def scrape_(browser_url, providers, airports, start_date, end_date):
 @option('--providers', type=str, default='ryanair,wizzair')
 @option('--airports', type=str, default='WAW,ALC,MAN')
 @option('--start-date', type=str, default=datetime.now().strftime('%Y-%m-%d'))
-@option('--end-date', type=str, default=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'))
+@option('--end-date', type=str, default=(datetime.now() + timedelta(days=60)).strftime('%Y-%m-%d'))
 def scrape(browser_url, providers, airports, start_date, end_date):
     return run(scrape_(browser_url, providers, airports, start_date, end_date))
 

@@ -1,6 +1,4 @@
 from asyncio import sleep
-import json
-import logging
 from random import random
 from uuid import uuid4
 
