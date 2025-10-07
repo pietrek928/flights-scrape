@@ -9,7 +9,7 @@ from .utils import sleep_rand
 from .webdrv import BrowserConnection, WSTab
 from .control import fetch_requests_body, get_element_center, get_next_element_center
 from .ryanair import download_ryanair
-from .wizzair import QueryWizzairFlights, download_wizzair, process_job
+from .wizzair import QueryWizzairFlights, click_next_date, download_wizzair, process_job, select_1way_dates
 
 
 async def test():
@@ -28,15 +28,19 @@ async def test():
             # await tab.send_command('Page.navigate', url='https://www.ryanair.com/pl/pl/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2025-10-14&dateIn=&isConnectedFlight=false&discount=0&promoCode=&isReturn=false&originIata=WAW&destinationIata=AGP&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2025-10-14&tpEndDate=&tpDiscount=0&tpPromoCode=&tpOriginIata=WAW&tpDestinationIata=AGP')
             create_task(tab.process_events())
 
-            print("Connected to Brave via WebSocket!")
+            await select_1way_dates(tab, 'WAW', 'CPH')
             await sleep_rand(4, 3)
-            await process_job(tab, QueryWizzairFlights(
-                id='1',
-                src_code='WAW',
-                dst_code='DBV',
-                start_date='2026-07-18',
-                days=6
-            ))
+            await click_next_date(tab)
+            await sleep_rand(4, 3)
+            # print("Connected to Brave via WebSocket!")
+            # await sleep_rand(4, 3)
+            # await process_job(tab, QueryWizzairFlights(
+            #     id='1',
+            #     src_code='WAW',
+            #     dst_code='DBV',
+            #     start_date='2026-07-18',
+            #     days=6
+            # ))
             # async for url, content_future in fetch_requests_body(tab, 'https://be.wizzair.com'):
             #     content = await content_future
             #     print(url, content)
@@ -88,7 +92,7 @@ def scrape(browser_url, providers, airports, start_date, end_date):
     return run(scrape_(browser_url, providers, airports, start_date, end_date))
 
 
-# run(test())
+run(test())
 # if __name__ == '__main__':
 #     logging.basicConfig(level=logging.INFO)
 #     run(test())

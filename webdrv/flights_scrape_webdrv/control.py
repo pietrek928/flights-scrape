@@ -15,6 +15,19 @@ async def left_click(tab: WSTab, x, y, rand_move=15):
     await sleep_rand(.1, .15)
 
 
+async def send_text(tab: WSTab, text: str, delay: float = 0.05):
+    for seq in text.split('{'):
+        if '}' in seq:
+            k = seq.split('}', 1)[0]
+            await tab.send_key('keyDown', key=k)
+            await sleep_rand(delay * 0.8, delay * 1.2)
+            await tab.send_key('keyUp', key=k)
+            await sleep_rand(delay * 0.8, delay * 1.2)
+        for char in seq.split('}', 1)[-1]:
+            await tab.send_text(char)
+            await sleep_rand(delay * 0.8, delay * 1.2)
+
+
 async def move_mouse_sim(tab: WSTab, x, y, xend, yend, max_move=100, a=0.2):
     while True:
         dx = xend - x

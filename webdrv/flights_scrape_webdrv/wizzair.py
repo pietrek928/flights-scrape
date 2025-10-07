@@ -6,12 +6,17 @@ from typing import Tuple
 from datetime import datetime, timedelta
 import websockets
 
-from .control import fetch_requests_body, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads
+from .control import fetch_requests_body, get_element_center, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads, send_text
 from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result
 from .job import Job, load_jobs, run_jobs
 
+
+class QueryWizzairDates(Job):
+    src_code: str
+    dst_code: str
+    fwd_count: int
 
 class QueryWizzairFlights(Job):
     src_code: str
@@ -72,6 +77,50 @@ def get_job_url(job: QueryWizzairFlights):
         f'https://www.wizzair.com/en-gb/booking/select-flight/'
         f'{job.src_code}/{job.dst_code}/{job.start_date}/null/1/0/0/null'
     )
+
+async def select_1way_dates(tab: WSTab, src_code: str, dst_code: str):
+    await tab.navigate(f'https://www.wizzair.com/en-gb')
+    await sleep_rand(4, 5)
+
+    centers = await get_element_center(tab, r'[value="oneway"]')
+    x, y = centers[0]
+    await move_mouse_sim(tab, 0, 0, x, y)
+    await sleep_rand(0.2, 0.2)
+    await left_click(tab, x, y, rand_move=5)
+    xp, yp = x, y
+
+    await sleep_rand(1, 2)
+    centers = await get_element_center(tab, r'[placeholder="Origin"]')
+    x, y = centers[0]
+    await move_mouse_sim(tab, xp, yp, x, y)
+    await sleep_rand(0.5, 0.3)
+    await left_click(tab, x, y)
+    await send_text(tab, src_code + '{Enter}')
+    xp, yp = x, y
+    
+    await sleep_rand(1, 2)
+    centers = await get_element_center(tab, r'[placeholder="Destination"]')
+    x, y = centers[0]
+    await move_mouse_sim(tab, xp, yp, x, y)
+    await sleep_rand(0.5, 0.3)
+    await left_click(tab, x, y)
+    await send_text(tab, dst_code + '{Enter}')
+    xp, yp = x, y
+
+    await sleep_rand(1, 2)
+    centers = await get_element_center(tab, r'[placeholder="Departure"]')
+    x, y = centers[0]
+    await move_mouse_sim(tab, xp, yp, x, y)
+    await sleep_rand(0.5, 0.3)
+    await left_click(tab, x, y)
+
+
+async def click_next_date(tab: WSTab):
+    centers = await get_element_center(tab, r'[aria-label="Later dates"]')
+    x, y = centers[0]
+    await move_mouse_sim(tab, 0, 0, x, y)
+    await sleep_rand(0.2, 0.2)
+    await left_click(tab, x, y, rand_move=5)
 
 
 async def process_job(tab: WSTab, job: Job) -> Tuple[Job, ...]:

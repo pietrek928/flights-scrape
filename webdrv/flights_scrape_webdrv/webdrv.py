@@ -117,6 +117,19 @@ class WSTab:
 
     async def navigate(self, url: str):
         return await self.send_command('Page.navigate', url=url)
+    
+    async def send_text(self, text: str):
+        await self.send_command('Input.insertText', text=text)
+    
+    # keyDown, keyUp
+    async def send_key(self, type_: str, key: str = None, keyCode: str = None):
+        if keyCode:
+            assert key
+            await self.send_command('Input.dispatchKeyEvent', type=type_, key=key, windowsVirtualKeyCode=keyCode)
+        elif key:
+            await self.send_command('Input.dispatchKeyEvent', type=type_, key=key)
+        else:
+            raise ValueError('Either text, key or keyCode must be provided')
 
     # mousePressed, mouseReleased
     async def left_click(self, x, y, event_type, click_count=1):
