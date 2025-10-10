@@ -8,7 +8,7 @@ import websockets
 from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result
-from .job import Job, load_jobs, run_jobs
+from .job import Job, load_jobs, run_jobs, save_jobs
 
 
 RYANAIR_API_URL = 'https://www.ryanair.com/api'
@@ -163,8 +163,11 @@ async def download_ryanair(browser_conn, airports, start_date, end_date):
         jobs = load_jobs('ryanair_jobs.json', Job)
     except FileNotFoundError:
         jobs = tuple(init_jobs(airports, start_date, end_date))
-    await run_jobs(
-        jobs, process_job, partial(make_worker, browser_conn),
-        max_workers=1, max_worker_jobs=8,
-        save_jobs_fname='ryanair_jobs.json'
-    )
+    try:
+        await run_jobs(
+            jobs, process_job, partial(make_worker, browser_conn),
+            max_workers=1, max_worker_jobs=8,
+            save_jobs_fname='ryanair_jobs.json'
+        )
+    finally:
+        save_jobs('ryanair_jobs.json', jobs)

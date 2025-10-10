@@ -92,7 +92,7 @@ def scrape(browser_url, providers, airports, start_date, end_date):
     return run(scrape_(browser_url, providers, airports, start_date, end_date))
 
 
-run(test())
+# run(test())
 # if __name__ == '__main__':
 #     logging.basicConfig(level=logging.INFO)
 #     run(test())

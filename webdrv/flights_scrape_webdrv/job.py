@@ -2,7 +2,7 @@ import json
 import logging
 from asyncio import create_task, wait, FIRST_COMPLETED
 from random import shuffle, uniform
-from typing import Tuple
+from typing import List, Tuple
 from pydantic import BaseModel
 
 from .utils import get_all_subclasses, safe_format_json
@@ -15,20 +15,27 @@ class Job(BaseModel):
 def save_jobs(fname, jobs):
     with open(fname, 'w') as f:
         json.dump(safe_format_json(jobs), f)
-        logging.info(f'Saved {len(jobs)} jobs as `{fname}`')
+        logging.info(f'Saved jobs as `{fname}`')
+
+
+def _parse_jobs(obj, subclasses):
+    if isinstance(obj, (list, tuple, set)):
+        return tuple(_parse_jobs(o, subclasses) for o in obj)
+    elif isinstance(obj, dict):
+        if 'type_' in obj:
+            job_type = obj.pop('type_')
+            if job_type not in subclasses:
+                raise ValueError(f'Unknown job type: {job_type}')
+            return subclasses[job_type].model_validate(obj)
+        else:
+            return {k: _parse_jobs(v, subclasses) for k, v in obj.items()}
+    return obj
 
 
 def load_jobs(fname, base_cls):
     subclasses = get_all_subclasses(base_cls)
     with open(fname) as f:
-        jobs = []
-        for job in json.load(f):
-            job_type = job.pop('type_')
-            if job_type not in subclasses:
-                raise ValueError(f'Unknown job type: {job_type}')
-            jobs.append(subclasses[job_type].model_validate(job))
-        logging.info(f'Loaded {len(jobs)} jobs from `{fname}`')
-    return jobs
+        return _parse_jobs(json.load(f), subclasses)
 
 
 async def _process_job(process_job, worker, job, worker_jobs_limit):
@@ -37,15 +44,13 @@ async def _process_job(process_job, worker, job, worker_jobs_limit):
 
 
 async def run_jobs(
-    start_jobs: Tuple[Job, ...], process_job,
-    make_worker, max_workers, max_worker_jobs,
-    save_jobs_fname
+    jobs: List[Job], process_job,
+    make_worker, max_workers, max_worker_jobs
 ):
-    jobs = list(start_jobs)
     executed_jobs = {}
     shuffle(jobs)
+    working_jobs = set()
     try:
-        working_jobs = set()
         while jobs or working_jobs:
             if working_jobs:
                 free_workers = []
@@ -80,5 +85,4 @@ async def run_jobs(
         for worker, worker_jobs_limit in working_jobs:
             await worker.close()
     finally:
-        if save_jobs_fname:
-            save_jobs(save_jobs_fname, tuple(jobs) + tuple(executed_jobs.values()))
+        jobs.extend(executed_jobs.values())
