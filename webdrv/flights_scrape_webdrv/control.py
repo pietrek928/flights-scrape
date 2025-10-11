@@ -1,6 +1,6 @@
 from base64 import b64decode
 from random import uniform
-from typing import AsyncIterator, Optional, Tuple
+from typing import AsyncIterator, Dict, Optional, Tuple
 
 from .utils import sleep_rand
 from .webdrv import WSTab
@@ -118,10 +118,21 @@ async def get_response_body(tab: WSTab, request_id: str):
         print(f'Failed to get response body: {data["error"]}')
 
 
-async def fetch_requests_body(tab: WSTab, url_prefix: str) -> AsyncIterator[Tuple[str, str]]:
-    async for params in tab.listen_method('Network.responseReceived'):
+async def fetch_requests_urls(tab: WSTab, url_prefix: str, urls: Dict) -> AsyncIterator[Tuple[str, str]]:
+    async for params in tab.listen_method('Network.requestWillBeSent'):
         request_id = params['requestId']
-        response = params['response']
-        url = response['url']
+        request = params['request']
+        url = request['url']
         if url.startswith(url_prefix):
+            # print('url start', request_id, url)
+            urls[request_id] = url
+
+
+async def fetch_finished_requests(
+    tab: WSTab, urls: Dict, end_event='Network.responseReceived'
+) -> AsyncIterator[Tuple[str, str]]:
+    async for params in tab.listen_method(end_event):
+        request_id = params['requestId']
+        if request_id in urls:
+            url = urls.pop(request_id)
             yield url, request_id

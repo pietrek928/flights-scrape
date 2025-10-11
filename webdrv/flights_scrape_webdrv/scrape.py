@@ -7,7 +7,7 @@ import websockets
 
 from .utils import sleep_rand
 from .webdrv import BrowserConnection, WSTab
-from .control import fetch_requests_body, get_element_center, get_next_element_center
+from .control import get_element_center, get_next_element_center
 from .ryanair import download_ryanair
 from .wizzair import QueryWizzairFlights, click_next_date, download_wizzair, process_job, select_1way_dates
 

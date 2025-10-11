@@ -7,17 +7,20 @@ from typing import List, Tuple
 from datetime import datetime, timedelta
 import websockets
 
-from .control import fetch_requests_body, get_element_center, get_element_text, get_next_element_center, get_response_body, left_click, move_mouse_sim, save_post_payloads, send_text
+from .control import (
+    fetch_finished_requests, fetch_requests_urls, get_element_center, get_element_text, get_next_element_center, get_response_body,
+    left_click, move_mouse_sim, save_post_payloads, send_text
+)
 from .utils import new_id, sleep_rand
 from .webdrv import WSTab
 from .store import save_result
 from .job import Job, load_jobs, run_jobs, save_jobs
 
 
-class QueryWizzairDates(Job):
-    src_code: str
-    dst_code: str
-    fwd_count: int
+# class QueryWizzairDates(Job):
+#     src_code: str
+#     dst_code: str
+#     fwd_count: int
 
 
 class QueryWizzairFlights(Job):
@@ -43,16 +46,22 @@ def count_dates_after(wizzair_dates, start_date, days):
     )
 
 
-def make_jobs(src_codes: Tuple[str, ...], dst_codes: Tuple[str, ...], fwd_count: int):
+def make_jobs(
+    src_codes: Tuple[str, ...], dst_codes: Tuple[str, ...],
+    date_start, date_end, days_skip, days_batch
+):
+    days_interval = int((date_end - date_start).days)
     for src_code in src_codes:
         for dst_code in dst_codes:
             if src_code != dst_code:
-                yield QueryWizzairDates(
-                    id=new_id(),
-                    src_code=src_code,
-                    dst_code=dst_code,
-                    fwd_count=fwd_count
-                )
+                for fwd_days in range(0, days_interval, days_skip):
+                    yield QueryWizzairFlights(
+                        id=new_id(),
+                        src_code=src_code,
+                        dst_code=dst_code,
+                        start_date=(date_start + timedelta(days=fwd_days)).strftime('%Y-%m-%d'),
+                        days=days_batch
+                    )
 
 
 def make_dates_jobs(
@@ -75,11 +84,17 @@ def make_dates_jobs(
         )
 
 
-async def process_responses(tab: WSTab, payloads: dict, jobs: List, processed_dates: defaultdict[set]):
-    async for url, request_id in fetch_requests_body(tab, 'https://be.wizzair.com/'):
-        if 'Api/asset/map' in url:
+async def process_responses(
+    tab: WSTab, payloads: dict, urls: dict, jobs: List, processed_dates: defaultdict[set],
+    date_start, date_end
+):
+    date_start_str = date_start.strftime('%Y-%m-%d')
+    date_end_str = date_end.strftime('%Y-%m-%d')
+    async for url, request_id in fetch_finished_requests(tab, urls):
+        if '/Api/asset/map' in url:
             pass
             # body = await get_response_body(tab, request_id)
+
         elif '/Api/search/search' in url:
             body = await get_response_body(tab, request_id)
             if not body:
@@ -88,13 +103,19 @@ async def process_responses(tab: WSTab, payloads: dict, jobs: List, processed_da
 
             payload = payloads.get(request_id)
             logging.info(f'Wizzair body={len(body)} payload={len(payload or '')} url={url}')
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError as e:
+                logging.error(f'Wizzair JSON decode error: {e} for {url}: {body}')
+                continue
             await save_result('wizzair', dict(
-                body=json.loads(body),
+                body=data,
                 payload=payload,
                 url=url,
                 fetch_timestamp=datetime.now().isoformat(),
             ))
-        elif '/Api/search/flightDates' in url:
+
+        elif '/Api/search/flightDates' in url:  # remove ???
             body = await get_response_body(tab, request_id)
             if not body:
                 logging.warning(f'Wizzair empty body for {url}')
@@ -111,11 +132,40 @@ async def process_responses(tab: WSTab, payloads: dict, jobs: List, processed_da
                 dates = tuple(
                     d.split('T')[0] for d in json.loads(body)['flightDates']
                 )
-                dates = set(dates) - processed_dates[(src_code, dst_code)]
+                dates = tuple(
+                    d for d in dates if (
+                        date_start_str <= d <= date_end_str
+                        and d not in processed_dates[(src_code, dst_code)]
+                    )
+                )
                 jobs_key = (src_code, dst_code)
                 jobs.extend(make_dates_jobs(src_code, dst_code, dates))
                 processed_dates[jobs_key].update(dates)
                 logging.info(f'Wizzair found {len(dates)} dates for {src_code}-{dst_code}, total jobs: {len(jobs)}')
+
+        elif '/Api/asset/farechart' in url:
+            body = await get_response_body(tab, request_id)
+            if not body:
+                logging.warning(f'Wizzair empty body for {url}')
+                continue
+            logging.info(f'Wizzair farechart body={len(body)} url={url}')
+
+            new_dates = defaultdict(set)
+            for fare in json.loads(body).get('outboundFlights', ()):
+                if fare.get('classOfService'):
+                    src_code = fare['departureStation']
+                    dst_code = fare['arrivalStation']
+                    date = fare['date'].split('T')[0]
+                    if date_start_str <= date <= date_end_str:
+                        new_dates[(src_code, dst_code)].add(date)
+            for (src_code, dst_code), dates in new_dates.items():
+                jobs_key = (src_code, dst_code)
+                dates = tuple(
+                    d for d in dates if d not in processed_dates[jobs_key]
+                )
+                jobs.extend(make_dates_jobs(src_code, dst_code, dates))
+                processed_dates[jobs_key].update(dates)
+                logging.info(f'Wizzair farechart found {len(dates)} new dates for {src_code}-{dst_code}, total jobs: {len(jobs)}')
 
 
 def get_job_url(job: QueryWizzairFlights):
@@ -207,30 +257,37 @@ async def process_job(tab: WSTab, job: Job) -> Tuple[Job, ...]:
             print('click', x, y)
             await sleep_rand(8, 6)
     
-    elif isinstance(job, QueryWizzairDates):
-        await select_1way_dates(tab, job.src_code, job.dst_code)
-        await sleep_rand(4, 6)
-        for it in range(job.fwd_count):
-            if not await click_next_date(tab):
-                break
-            logging.info(f'Clicked next date page {it+1}/{job.fwd_count}')
-            await sleep_rand(4, 6)
+    # elif isinstance(job, QueryWizzairDates):
+    #     await select_1way_dates(tab, job.src_code, job.dst_code)
+    #     await sleep_rand(4, 6)
+    #     for it in range(job.fwd_count):
+    #         if not await click_next_date(tab):
+    #             break
+    #         logging.info(f'Clicked next date page {it+1}/{job.fwd_count}')
+    #         await sleep_rand(4, 6)
 
     else:
         raise ValueError(f'Unknown job type: {job}')
 
 
-async def make_worker(conn, jobs, processed_dates):
+async def make_worker(conn, jobs, processed_dates, date_start, date_end):
     ws_url = await conn.open_new_tab()
     websocket = await websockets.connect(ws_url).__aenter__()
     tab = WSTab(websocket)
     payloads = {}
+    urls = {}
     shield(create_task(save_post_payloads(tab, payloads, 'https://be.wizzair.com/')))
-    shield(create_task(process_responses(tab, payloads, jobs, processed_dates)))
+    shield(create_task(fetch_requests_urls(tab, 'https://be.wizzair.com/', urls)))
+    shield(create_task(process_responses(
+        tab, payloads, urls, jobs, processed_dates, date_start, date_end
+    )))
     shield(create_task(tab.process_events()))
     await tab.send_command("Page.enable")
     await tab.send_command("Input.enable")
-    await tab.send_command("Network.enable")
+    await tab.send_command("Network.enable", params={
+        "maxTotalBufferSize": 10485760,   # e.g., 10MB total buffer
+        "maxResourceBufferSize": 5242880, # e.g., 5MB per resource
+    })
     await sleep_rand(4, 6)
     logging.info('Wizzair tab opened')
     return tab
@@ -240,15 +297,18 @@ async def download_wizzair(browser_conn, airports, start_date, end_date):
     try:
         jobs, processed_dates = load_jobs('wizzair_jobs.json', Job)
         jobs = list(jobs)
+        processed_dates = defaultdict(set, processed_dates)
     except FileNotFoundError:
         jobs = list(make_jobs(
-            airports, airports, fwd_count=(end_date - start_date).days // 60 + 1
+            airports, airports, date_start=start_date, date_end=end_date,
+            days_skip=30, days_batch=6
         ))
         processed_dates = defaultdict(set)
     try:
         await run_jobs(
-            jobs, process_job, partial(make_worker, browser_conn, jobs, processed_dates),
-            max_workers=1, max_worker_jobs=8
+            jobs, process_job, partial(
+                make_worker, browser_conn, jobs, processed_dates, start_date, end_date
+            ), max_workers=1, max_worker_jobs=8
         )
     finally:
         save_jobs('wizzair_jobs.json', (jobs, processed_dates))
