@@ -19,6 +19,3 @@ dependencies = [
 
 [project.scripts]
 scrape-flights = "flights_scrape_webdrv.scrape:scrape"
-
-[tool.setuptools.packages.find]
-where = ["webdrv"]
