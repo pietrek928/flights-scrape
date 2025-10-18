@@ -1,10 +1,7 @@
 from collections import defaultdict
-import os
-import json
-import lzma as xz
-from datetime import datetime, timedelta
-from typing import Dict
+from datetime import UTC, datetime
 
+from .load_flights import city_to_num, load_ryanair_flights, load_wizzair_flights
 from .flight_optim import (
     TravelSearchSettings, DiffCostSettings, TravelCoverSettings,
     FlightIndex, DayScorer,
@@ -12,9 +9,19 @@ from .flight_optim import (
 )
 
 
-
 def find_flights():
-    flights, city_idx = load_ryanair_flights('/run/media/pietrek/C068DF4C68DF4038/data/datasets/ryanair')
+    flights = FlightIndex()
+    datetime_base = datetime.now(UTC)
+    city_idx = {}
+    flight_id_idx = defaultdict(int)
+    # load_ryanair_flights(
+    #     flights, 'data/ryanair', datetime_base,
+    #     city_idx, flight_id_idx
+    # )
+    load_wizzair_flights(
+        flights, 'data/wizzair', datetime_base,
+        city_idx, flight_id_idx
+    )
     flights.sort_flights()
     # for f in iter(flights):
     #     print(f)
@@ -37,16 +44,16 @@ def find_flights():
     )
 
     selected_flights = flights.select_flights(
-        {_city_to_num(city_idx, 'WAW'), _city_to_num(city_idx, 'ALC')},
-        {_city_to_num(city_idx, 'WAW'), _city_to_num(city_idx, 'ALC')},
+        {city_to_num(city_idx, 'WAW'), city_to_num(city_idx, 'ALC')},
+        {city_to_num(city_idx, 'WAW'), city_to_num(city_idx, 'ALC')},
         0, 1000000
     )
     print(selected_flights)
 
-    start_city_idx = _city_to_num(city_idx, 'WAW')
+    start_city_idx = city_to_num(city_idx, 'WAW')
     print('start city', start_city_idx)
     trips = find_best_single_trip(
-        _city_to_num(city_idx, 'WAW'), 0.,
+        city_to_num(city_idx, 'WAW'), 0.,
         flights=selected_flights,
         settings=settings,
         city_costs=city_costs
